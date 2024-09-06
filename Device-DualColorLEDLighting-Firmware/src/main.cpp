@@ -12,12 +12,36 @@
 #define BLUE_RELAY 4
 #define WHITE_RELAY 5
 
+//  Max LED Intensities
+#define MAX_WHITE_PWM 255 // 255 is max
+#define MAX_BLUE_PWM 255 //      ""
+
+//  loop light durations
+int sunriseFadeDuration = 10000;
+int blueOnlyDuration = 5000;
+float blueOnlyMaxIntensity = 0.25;  //  Percent of max brightness
+int highNoonDuration = 5000;
+int sunsetFadeDuration = 1000;
+int nightTime = 5000;
+
 // Node controller core object
 NodeControllerCore core;
 
 // put function declarations here:
 // Callback function for received messages from the CAN bus
 void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data);
+
+void DemoLoop()
+{
+  int startTime = millis();
+  //  Fade blueOnly up
+  while(startTime + blueOnlyDuration > startTime)
+  {
+    startTime = millis();
+    analogWrite(BLUE_PWM_PIN, ())
+  }
+
+}
 
 void setup()
 {
