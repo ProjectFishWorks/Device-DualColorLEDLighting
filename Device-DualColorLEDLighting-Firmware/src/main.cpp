@@ -68,6 +68,8 @@ void DemoLoop()
     currentWhiteIntensity = ((blueStartTime + sunriseFadeDuration-startTime)+fadeValueBlue);
     analogWrite(BLUE_PWM_PIN, currentBlueIntensity);
     Serial.println(currentBlueIntensity);
+    // check for interupts
+    delay(100);
   }
 
 }
