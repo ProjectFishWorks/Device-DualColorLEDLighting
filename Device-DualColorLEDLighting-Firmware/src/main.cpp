@@ -17,12 +17,12 @@
 #define MAX_BLUE_PWM 255 //      ""
 
 //  loop light durations
-int sunriseFadeDuration = 10000;
-int blueOnlyDuration = 5000;
+#define blueOnlyDuration 5000
+#define sunriseFadeDuration 10000
 float blueOnlyMaxIntensity = 0.25;  //  Percent of max brightness
-int highNoonDuration = 5000;
-int sunsetFadeDuration = 1000;
-int nightTime = 5000;
+#define highNoonDuration 5000
+#define sunsetFadeDuration 10000
+#define nightTime 5000
 
 // Node controller core object
 NodeControllerCore core;
@@ -33,12 +33,41 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data);
 
 void DemoLoop()
 {
-  int startTime = millis();
+  unsigned long currentTime = millis();
+  unsigned long startTime = millis();
+  unsigned long blueStartTime = millis();
+  unsigned long whiteStartTime = millis();
+  int currentBlueIntensity;
+  int currentWhiteIntensity;
+
   //  Fade blueOnly up
-  while(startTime + blueOnlyDuration > startTime)
+  while(startTime + blueOnlyDuration > currentTime)
   {
-    startTime = millis();
-    analogWrite(BLUE_PWM_PIN, ())
+    currentTime = millis();
+    unsigned long fadeValueBlue = ((MAX_BLUE_PWM * blueOnlyMaxIntensity)/blueOnlyDuration);
+    Serial.println(fadeValueBlue);
+    currentBlueIntensity = ((blueStartTime-startTime)+fadeValueBlue);
+    analogWrite(BLUE_PWM_PIN, currentBlueIntensity);
+    Serial.println(currentBlueIntensity);
+    // check for interupts
+    delay(100);
+  }
+  
+  //  Fade blue and white to highNoon
+  while(startTime + blueOnlyDuration + sunriseFadeDuration > currentTime)
+  {
+    currentTime = millis();
+    unsigned long fadeValueBlue = ((MAX_BLUE_PWM * blueOnlyMaxIntensity)/blueOnlyDuration + sunriseFadeDuration);
+    Serial.println(fadeValueBlue);
+    currentBlueIntensity = ((blueStartTime + sunriseFadeDuration-startTime)+fadeValueBlue);
+    analogWrite(BLUE_PWM_PIN, currentBlueIntensity);
+    Serial.println(currentBlueIntensity);
+    
+    unsigned long fadeValueWhite = (MAX_WHITE_PWM / blueOnlyDuration + sunriseFadeDuration);
+    Serial.println(fadeValueWhite);
+    currentWhiteIntensity = ((blueStartTime + sunriseFadeDuration-startTime)+fadeValueBlue);
+    analogWrite(BLUE_PWM_PIN, currentBlueIntensity);
+    Serial.println(currentBlueIntensity);
   }
 
 }
