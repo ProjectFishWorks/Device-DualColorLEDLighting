@@ -28,7 +28,7 @@ char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursd
 //  Max LED Intensities
 float MAX_WHITE_PWM = 255.0; // 255 is max
 float MAX_BLUE_PWM = 255.0; //      ""
-int scale factor = 100000;
+int scaleFactor = 1000000000;
 
 //  loop light durations
 int blueOnlyDuration = 10000;
@@ -37,8 +37,8 @@ float blueOnlyMaxIntensity = 0.25;  //  Percent of max brightness
 int highNoonDuration = 10000.0;
 int sunsetFadeDuration = 10000.0;
 int nightTime = 5000.0;
-int adjustedBlueOnlyDuration = (blueOnlyDuration * scale factor)
-int fadeValueBlue = ((MAX_BLUE_PWM * blueOnlyMaxIntensity)/blueOnlyDuration);
+int scaledBlueOnlyDuration = (blueOnlyDuration * scaleFactor);
+int scaledFadeValueBlue = (((MAX_BLUE_PWM * scaleFactor) * scaledBlueOnlyDuration));
 
 // Node controller core object
 NodeControllerCore core;
@@ -55,6 +55,8 @@ void DemoLoop()
   unsigned long whiteStartTime = millis();
   unsigned long testTime = millis();
 
+  int scaledCurrentBlueIntensity;
+  int scaledCurrentWhiteIntensity;
   float currentBlueIntensity;
   float currentWhiteIntensity;
 
@@ -63,11 +65,11 @@ void DemoLoop()
   {
     Serial.println(currentTime);
     currentTime = millis();
-    currentBlueIntensity = (((float)currentTime - (float)blueStartTime)+(fadeValueBlue*0.6375));
+    scaledCurrentBlueIntensity = (((float)currentTime - (float)blueStartTime)+(scaledFadeValueBlue));
     analogWrite(BLUE_PWM_PIN, (int)currentBlueIntensity);
     testTime = millis();
     Serial.println(testTime);
-    //delay(5000);
+    delay(1);
 
 
     #ifdef debuging
