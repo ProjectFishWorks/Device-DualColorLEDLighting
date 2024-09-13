@@ -1,4 +1,4 @@
-#include <Arduino.h>
+00#include <Arduino.h>
 #include <NodeControllerCore.h>
 #include <RTClib.h>
 #include <Wire.h>
@@ -28,15 +28,17 @@ char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursd
 //  Max LED Intensities
 float MAX_WHITE_PWM = 255.0; // 255 is max
 float MAX_BLUE_PWM = 255.0; //      ""
+int scale factor = 100000;
 
 //  loop light durations
-float blueOnlyDuration = 10000.0;
-float sunriseFadeDuration = 15000.0;
+int blueOnlyDuration = 10000;
+int sunriseFadeDuration = 15000;
 float blueOnlyMaxIntensity = 0.25;  //  Percent of max brightness
-float highNoonDuration = 10000.0;
-float sunsetFadeDuration = 10000.0;
-float nightTime = 5000.0;
-float fadeValueBlue = ((MAX_BLUE_PWM * blueOnlyMaxIntensity)/blueOnlyDuration);
+int highNoonDuration = 10000.0;
+int sunsetFadeDuration = 10000.0;
+int nightTime = 5000.0;
+int adjustedBlueOnlyDuration = (blueOnlyDuration * scale factor)
+int fadeValueBlue = ((MAX_BLUE_PWM * blueOnlyMaxIntensity)/blueOnlyDuration);
 
 // Node controller core object
 NodeControllerCore core;
