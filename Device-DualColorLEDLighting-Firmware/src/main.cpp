@@ -1,9 +1,10 @@
-00#include <Arduino.h>
+#include <Arduino.h>
 #include <NodeControllerCore.h>
 #include <RTClib.h>
 #include <Wire.h>
 #include <SPI.h>
 
+/*
 RTC_DS3231 rtc; // Create the RTC object
 
     // This line sets the RTC with an explicit date & time, for example to set
@@ -11,12 +12,12 @@ RTC_DS3231 rtc; // Create the RTC object
     // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
 
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
-
+*/
 #define NODE_ID 0xA1            // 161
 #define WHITE_MESSAGE_ID 0x0A00 // 2560
 #define BLUE_MESSAGE_ID 0x0A01  // 2561
 
-//#define debuging
+#define debuging
 
 // LED pins
 #define WHITE_PWM_PIN 3
@@ -28,17 +29,15 @@ char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursd
 //  Max LED Intensities
 float MAX_WHITE_PWM = 255.0; // 255 is max
 float MAX_BLUE_PWM = 255.0; //      ""
-int scaleFactor = 1000000000;
 
 //  loop light durations
 int blueOnlyDuration = 10000;
 int sunriseFadeDuration = 15000;
-float blueOnlyMaxIntensity = 0.25;  //  Percent of max brightness
+float blueOnlyMaxIntensity = (255 * 0.5);  //  Percent of max brightness
 int highNoonDuration = 10000.0;
 int sunsetFadeDuration = 10000.0;
 int nightTime = 5000.0;
-int scaledBlueOnlyDuration = (blueOnlyDuration * scaleFactor);
-int scaledFadeValueBlue = (((MAX_BLUE_PWM * scaleFactor) * scaledBlueOnlyDuration));
+
 
 // Node controller core object
 NodeControllerCore core;
@@ -47,7 +46,96 @@ NodeControllerCore core;
 // Callback function for received messages from the CAN bus
 void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data);
 
-void DemoLoop()
+
+
+
+void DemoLoop2()
+{   
+  analogWrite(BLUE_PWM_PIN, 255);
+  analogWrite(WHITE_PWM_PIN, 255);
+  Serial.println("Blue LED off");
+  Serial.println("White LED off");
+    unsigned long currentTime = millis();
+    unsigned long startTime = millis();
+    unsigned long blueEndTime = millis();
+    int currentBlueIntensity;
+    int currentWhiteIntensity;
+
+    //  Fade blueOnly up
+    while(startTime + blueOnlyDuration > currentTime)
+    {
+      delay(100);
+      currentTime = millis();
+      currentBlueIntensity = map(currentTime, startTime, startTime + blueOnlyDuration, 5, blueOnlyMaxIntensity);
+      analogWrite(BLUE_PWM_PIN, 255 - currentBlueIntensity);
+
+      #ifdef debuging
+      Serial.print("currentBlueIntensity = ");
+      Serial.println(currentBlueIntensity);
+      #endif
+    }
+
+    //  Fade blue and white to highNoon
+    startTime = millis();
+    blueEndTime = millis();
+    while(startTime + sunriseFadeDuration > currentTime)
+    {
+      delay(100);
+      currentTime = millis();
+      //                         map( inputValue, low range input, high range input, low range output, high range output);
+      currentBlueIntensity = map(currentTime, startTime, blueEndTime + sunriseFadeDuration, blueOnlyMaxIntensity, MAX_BLUE_PWM);
+      analogWrite(BLUE_PWM_PIN, 255 - currentBlueIntensity);
+      currentWhiteIntensity = map(currentTime, startTime, startTime + sunriseFadeDuration, 0, MAX_WHITE_PWM);
+      analogWrite(WHITE_PWM_PIN, 255 - currentWhiteIntensity);
+
+      #ifdef debuging
+      Serial.print("currentBlueIntensity = ");
+      Serial.println(currentBlueIntensity);
+      Serial.print("currentWhiteIntensity = ");
+      Serial.println(currentWhiteIntensity);
+      #endif
+    }
+
+    //  highNoon
+    startTime = millis();
+        while(startTime + highNoonDuration > currentTime)
+    {
+      delay(100);
+      currentTime = millis();
+      analogWrite(BLUE_PWM_PIN, 255 - MAX_BLUE_PWM);
+      analogWrite(WHITE_PWM_PIN, 255 - MAX_WHITE_PWM);
+
+      #ifdef debuging
+      Serial.print("currentBlueIntensity = ");
+      Serial.println(currentBlueIntensity);
+      Serial.print("currentWhiteIntensity = ");
+      Serial.println(currentWhiteIntensity);
+      #endif
+    }
+
+    //  Fade blue and white to sunset
+    startTime = millis();
+    unsigned long highNoonEndTime = millis();
+    while(startTime + sunsetFadeDuration > currentTime)
+    {
+      delay(100);
+      currentTime = millis();
+      //                         map( inputValue, low range input, high range input, low range output, high range output);
+      currentBlueIntensity = map(currentTime, startTime, highNoonEndTime + sunsetFadeDuration, MAX_BLUE_PWM, blueOnlyMaxIntensity);
+      analogWrite(BLUE_PWM_PIN, currentBlueIntensity);
+      currentWhiteIntensity = map(currentTime, startTime, startTime + sunsetFadeDuration, MAX_WHITE_PWM, 0);
+      analogWrite(WHITE_PWM_PIN, currentWhiteIntensity);
+
+      #ifdef debuging
+      Serial.print("currentBlueIntensity = ");
+      Serial.println(currentBlueIntensity);
+      Serial.print("currentWhiteIntensity = ");
+      Serial.println(currentWhiteIntensity);
+      #endif
+    }
+}
+/*
+void DemoLoop1()
 {
   unsigned long currentTime = millis();
   unsigned long endTime = millis();
@@ -55,39 +143,35 @@ void DemoLoop()
   unsigned long whiteStartTime = millis();
   unsigned long testTime = millis();
 
-  int scaledCurrentBlueIntensity;
-  int scaledCurrentWhiteIntensity;
-  float currentBlueIntensity;
-  float currentWhiteIntensity;
+  u_int64_t scaledCurrentBlueIntensity;
+  u_int64_t scaledCurrentWhiteIntensity;
+  int currentBlueIntensity;
+  int currentWhiteIntensity;
 
   //  Fade blueOnly up
   while(blueStartTime + blueOnlyDuration > currentTime)
   {
-    Serial.println(currentTime);
-    currentTime = millis();
-    scaledCurrentBlueIntensity = (((float)currentTime - (float)blueStartTime)+(scaledFadeValueBlue));
-    analogWrite(BLUE_PWM_PIN, (int)currentBlueIntensity);
-    testTime = millis();
-    Serial.println(testTime);
-    delay(1);
+
 
 
     #ifdef debuging
+    //testTime = millis();
+    //Serial.print("testTime = ");
+    //Serial.println(testTime);
+    Serial.print("fadeValueBlue = ");
     Serial.println(fadeValueBlue);
-    Serial.println("fadeValueBlue");
+    Serial.print("currentBlueIntensity = ");
     Serial.println(currentBlueIntensity);
-    Serial.println("currentBlueIntensity");
-    Serial.println(endTime);
-    Serial.println("endTime");
+    //Serial.print("endTime = ");
+    //Serial.println(endTime);
+    Serial.print("currentTime = ");
     Serial.println(currentTime);
-    Serial.println("currentTime");
-    Serial.println(currentBlueIntensity);
-    Serial.println("currentBlueIntensity");
+    //Serial.print("currentBlueIntensity = ");
+    //Serial.println(currentBlueIntensity);
     // check for interupts
-    delay(500);
-    #endif
+    //delay(500);
     
-    endTime = (millis() - currentTime);
+    //endTime = (millis() - currentTime);
   }
   /*
   //  Fade blue and white to highNoon
@@ -112,8 +196,9 @@ void DemoLoop()
     // check for interupts
     delay(1000);
   }
-*/
+
 }
+*/
 
 /*
 void ChkForInterupts()
@@ -130,13 +215,14 @@ void setup()
   Serial.begin(115200);
 
   // Initialize the I2C bus for RTC
+/*
   Wire.begin(5, 10);  // Wire.begin(SDA, SCL)
     if (! rtc.begin(&Wire)) 
     {
     Serial.println("Couldn't find RTC");
     Serial.flush();
     }
-
+*/
   pinMode(WHITE_PWM_PIN, OUTPUT);
   pinMode(BLUE_PWM_PIN, OUTPUT);
   analogWrite(WHITE_PWM_PIN, 225); // set the PWM value to dim
@@ -161,7 +247,7 @@ void setup()
     Serial.println("Failed to initialize driver");
   }
 
-   rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+   //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
     // This line sets the RTC with an explicit date & time, for example to set
     // January 21, 2014 at 3am you would call:
     // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
@@ -178,9 +264,9 @@ void setup()
 
 void loop()
 {
-  //DemoLoop();
+  DemoLoop2();
 
-
+/*
     DateTime now = rtc.now();
 
     Serial.print(now.year(), DEC);
@@ -227,6 +313,7 @@ void loop()
 
     Serial.println();
     delay(3000);
+    */
 }
 
 // put function definitions here:
@@ -245,7 +332,7 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
       Serial.println("WHITE_LED to " + String(255 - data));
       // PWM control of the LED based on the received data
       // TODO: Add a check for the data range
-      if (data < 26)
+      if (data < 5)
       {
         digitalWrite(WHITE_RELAY, 0);
         delay(1000);
@@ -260,7 +347,7 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
 
     case BLUE_MESSAGE_ID:
       Serial.println("LED 2 to " + String(255 - data));
-      if (data < 26)
+      if (data < 5)
       {
         digitalWrite(BLUE_RELAY, 0);
         delay(1000);
