@@ -39,6 +39,8 @@ int highNoonDuration = 10000.0;
 int sunsetFadeDuration = 10000.0;
 int nightTime = 5000.0;
 
+int wait = 500; // delay time in milliseconds
+
 // Node controller core object
 NodeControllerCore core;
 
@@ -152,7 +154,7 @@ void loop()
 
 // put function definitions here:
 
-void DemoLoop()
+void DemoLoop() /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 {
   analogWrite(BLUE_PWM_PIN, 255);
   analogWrite(WHITE_PWM_PIN, 255);
@@ -167,7 +169,7 @@ void DemoLoop()
   //  Fade blueOnly up
   while (startTime + blueOnlyDuration > currentTime)
   {
-    delay(100);
+    delay(wait);
     currentTime = millis();
     currentBlueIntensity = map(currentTime, startTime, startTime + blueOnlyDuration, 5, blueOnlyMaxIntensity);
     analogWrite(BLUE_PWM_PIN, 255 - currentBlueIntensity);
@@ -183,7 +185,7 @@ void DemoLoop()
   blueEndTime = millis();
   while (startTime + sunriseFadeDuration > currentTime)
   {
-    delay(100);
+    delay(wait);
     currentTime = millis();
     //                     map( inputValue, low range input, high range input, low range output, high range output);
     currentBlueIntensity = map(currentTime, startTime, blueEndTime + sunriseFadeDuration, blueOnlyMaxIntensity, MAX_BLUE_PWM);
@@ -203,7 +205,7 @@ void DemoLoop()
   startTime = millis();
   while (startTime + highNoonDuration > currentTime)
   {
-    delay(100);
+    delay(wait);
     currentTime = millis();
     analogWrite(BLUE_PWM_PIN, 255 - MAX_BLUE_PWM);
     analogWrite(WHITE_PWM_PIN, 255 - MAX_WHITE_PWM);
@@ -220,12 +222,12 @@ void DemoLoop()
   startTime = millis();
   while (startTime + sunsetFadeDuration > currentTime)
   {
-    delay(100);
+    delay(wait);
     currentTime = millis();
     //                         map( inputValue, low range input, high range input, low range output, high range output);
     currentBlueIntensity = map(currentTime, startTime, startTime + sunsetFadeDuration, MAX_BLUE_PWM, blueOnlyMaxIntensity);
     analogWrite(BLUE_PWM_PIN, 255 - currentBlueIntensity);
-    currentWhiteIntensity = map(currentTime, startTime + sunsetFadeDuration, startTime, MAX_WHITE_PWM, 0);
+    currentWhiteIntensity = map(currentTime, startTime, startTime + sunsetFadeDuration, MAX_WHITE_PWM, 0);
     analogWrite(WHITE_PWM_PIN, 255 - currentWhiteIntensity);
 
 #ifdef debuging
@@ -240,7 +242,7 @@ void DemoLoop()
   startTime = millis();
   while (startTime + blueOnlyDuration > currentTime)
   {
-    delay(100);
+    delay(wait);
     currentTime = millis();
     currentBlueIntensity = map(currentTime, startTime, startTime + blueOnlyDuration, blueOnlyMaxIntensity, 0);
     analogWrite(BLUE_PWM_PIN, currentBlueIntensity);
@@ -248,22 +250,30 @@ void DemoLoop()
     if (currentBlueIntensity < 5)
     {
       digitalWrite(BLUE_RELAY, 0);
+      digitalWrite(WHITE_RELAY, 0);
     }
     else
     {
       digitalWrite(BLUE_RELAY, 1);
+      digitalWrite(WHITE_RELAY, 1);
     }
 
 #ifdef debuging
     Serial.print("currentBlueIntensity = ");
     Serial.println(currentBlueIntensity);
+    Serial.print("currentWhiteIntensity = ");
+    Serial.println(currentWhiteIntensity);
+    Serial.print("Blue relay = ");
+    Serial.println(digitalRead(BLUE_RELAY));
+    Serial.print("White relay = ");
+    Serial.println(digitalRead(WHITE_RELAY));
 #endif
   }
   //  nightTime
   startTime = millis();
   while (startTime + nightTime > currentTime)
   {
-    delay(100);
+    delay(wait);
     currentTime = millis();
     analogWrite(BLUE_PWM_PIN, 255);
     analogWrite(WHITE_PWM_PIN, 255);
@@ -277,6 +287,9 @@ void DemoLoop()
   }
 }
 
+///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Callback function for received messages from the CAN bus
 void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
 {
   Serial.println("Message received callback");
@@ -295,7 +308,7 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
       if (data < 5)
       {
         digitalWrite(WHITE_RELAY, 0);
-        delay(1000);
+        delay(wait);
         analogWrite(WHITE_PWM_PIN, 255 - data);
       }
       else
@@ -310,7 +323,7 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
       if (data < 5)
       {
         digitalWrite(BLUE_RELAY, 0);
-        delay(1000);
+        delay(wait);
         analogWrite(BLUE_PWM_PIN, 255 - data);
       }
       else
