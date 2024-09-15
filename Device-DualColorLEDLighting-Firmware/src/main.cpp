@@ -4,12 +4,11 @@
 #include <Wire.h>
 #include <SPI.h>
 
-
 RTC_DS3231 rtc; // Create the RTC object
 
-    // This line sets the RTC with an explicit date & time, for example to set
-    // January 21, 2014 at 3am you would call:
-    // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
+// This line sets the RTC with an explicit date & time, for example to set
+// January 21, 2014 at 3am you would call:
+// rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
 
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 
@@ -40,6 +39,7 @@ int sunsetFadeDuration = 10000.0;
 int nightTime = 5000.0;
 
 int wait = 500; // delay time in milliseconds
+int off = maxPWM;
 
 // Node controller core object
 NodeControllerCore core;
@@ -50,21 +50,20 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data);
 
 void DemoLoop();
 
-
 void setup()
 {
   // Initialize serial communication
   Serial.begin(115200);
 
   // Initialize the I2C bus for RTC
-  
-    Wire.begin(5, 10);  // Wire.begin(SDA, SCL)
-      if (! rtc.begin(&Wire))
-      {
-      Serial.println("Couldn't find RTC");
-      Serial.flush();
-      }
-  
+
+  Wire.begin(5, 10); // Wire.begin(SDA, SCL)
+  if (!rtc.begin(&Wire))
+  {
+    Serial.println("Couldn't find RTC");
+    Serial.flush();
+  }
+
   pinMode(WHITE_PWM_PIN, OUTPUT);
   pinMode(BLUE_PWM_PIN, OUTPUT);
   analogWrite(WHITE_PWM_PIN, 225); // set the PWM value to dim
@@ -91,71 +90,70 @@ void setup()
 
   // When time needs to be re-set on a previously configured device, the
   // following line sets the RTC to the date & time this sketch was compiled
-   rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   // This line sets the RTC with an explicit date & time, for example to set
   // January 21, 2014 at 3am you would call:
   // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
 }
 
-//  
+//
 void loop()
 {
   DemoLoop();
 
-  
-      DateTime now = rtc.now();
+  DateTime now = rtc.now();
 
-      Serial.print(now.year(), DEC);
-      Serial.print('/');
-      Serial.print(now.month(), DEC);
-      Serial.print('/');
-      Serial.print(now.day(), DEC);
-      Serial.print(" (");
-      Serial.print(daysOfTheWeek[now.dayOfTheWeek()]);
-      Serial.print(") ");
-      Serial.print(now.hour(), DEC);
-      Serial.print(':');
-      Serial.print(now.minute(), DEC);
-      Serial.print(':');
-      Serial.print(now.second(), DEC);
-      Serial.println();
+  Serial.print(now.year(), DEC);
+  Serial.print('/');
+  Serial.print(now.month(), DEC);
+  Serial.print('/');
+  Serial.print(now.day(), DEC);
+  Serial.print(" (");
+  Serial.print(daysOfTheWeek[now.dayOfTheWeek()]);
+  Serial.print(") ");
+  Serial.print(now.hour(), DEC);
+  Serial.print(':');
+  Serial.print(now.minute(), DEC);
+  Serial.print(':');
+  Serial.print(now.second(), DEC);
+  Serial.println();
 
-      Serial.print(" since midnight 1/1/1970 = ");
-      Serial.print(now.unixtime());
-      Serial.print("s = ");
-      Serial.print(now.unixtime() / 86400L);
-      Serial.println("d");
+  Serial.print(" since midnight 1/1/1970 = ");
+  Serial.print(now.unixtime());
+  Serial.print("s = ");
+  Serial.print(now.unixtime() / 86400L);
+  Serial.println("d");
 
-      // calculate a date which is 7 days, 12 hours, 30 minutes, 6 seconds into the future
-      DateTime future (now + TimeSpan(7,12,30,6));
+  // calculate a date which is 7 days, 12 hours, 30 minutes, 6 seconds into the future
+  DateTime future(now + TimeSpan(7, 12, 30, 6));
 
-      Serial.print(" now + 7d + 12h + 30m + 6s: ");
-      Serial.print(future.year(), DEC);
-      Serial.print('/');
-      Serial.print(future.month(), DEC);
-      Serial.print('/');
-      Serial.print(future.day(), DEC);
-      Serial.print(' ');
-      Serial.print(future.hour(), DEC);
-      Serial.print(':');
-      Serial.print(future.minute(), DEC);
-      Serial.print(':');
-      Serial.print(future.second(), DEC);
-      Serial.println();
+  Serial.print(" now + 7d + 12h + 30m + 6s: ");
+  Serial.print(future.year(), DEC);
+  Serial.print('/');
+  Serial.print(future.month(), DEC);
+  Serial.print('/');
+  Serial.print(future.day(), DEC);
+  Serial.print(' ');
+  Serial.print(future.hour(), DEC);
+  Serial.print(':');
+  Serial.print(future.minute(), DEC);
+  Serial.print(':');
+  Serial.print(future.second(), DEC);
+  Serial.println();
 
-      Serial.print("Temperature: ");
-      Serial.print(rtc.getTemperature());
-      Serial.println(" C");
+  Serial.print("Temperature: ");
+  Serial.print(rtc.getTemperature());
+  Serial.println(" C");
 
-      Serial.println();
-      delay(3000);
-      
+  Serial.println();
+  delay(3000);
 }
 
 // put function definitions here:
 
 void DemoLoop() /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 {
+  //-------------------------------------------------------- sunrise -------------------------------------------------------------------
   analogWrite(BLUE_PWM_PIN, 255);
   analogWrite(WHITE_PWM_PIN, 255);
   Serial.println("Blue LED off");
@@ -172,15 +170,37 @@ void DemoLoop() ////////////////////////////////////////////////////////////////
     delay(wait);
     currentTime = millis();
     currentBlueIntensity = map(currentTime, startTime, startTime + blueOnlyDuration, 5, blueOnlyMaxIntensity);
-    analogWrite(BLUE_PWM_PIN, 255 - currentBlueIntensity);
+    analogWrite(BLUE_PWM_PIN, maxPWM - currentBlueIntensity);
+    
+    if (currentBlueIntensity < 5)
+    {
+      digitalWrite(BLUE_RELAY, 0);
+    }
+    else
+    {
+      digitalWrite(BLUE_RELAY, 1);
+    }
+
+    if (currentWhiteIntensity < 5)
+    {
+      digitalWrite(WHITE_RELAY, 0);
+    }
+    else
+    {
+      digitalWrite(WHITE_RELAY, 1);
+    }
 
 #ifdef debuging
     Serial.print("currentBlueIntensity = ");
     Serial.println(currentBlueIntensity);
+    Serial.print("Blue relay = ");
+    Serial.println(digitalRead(BLUE_RELAY));
+    Serial.print("White relay = ");
+    Serial.println(digitalRead(WHITE_RELAY));
 #endif
   }
 
-  //  Fade blue and white to highNoon
+  //--------------------------------------------------------- Fade blue and white to highNoon --------------------------------------------------
   startTime = millis();
   blueEndTime = millis();
   while (startTime + sunriseFadeDuration > currentTime)
@@ -189,72 +209,25 @@ void DemoLoop() ////////////////////////////////////////////////////////////////
     currentTime = millis();
     //                     map( inputValue, low range input, high range input, low range output, high range output);
     currentBlueIntensity = map(currentTime, startTime, blueEndTime + sunriseFadeDuration, blueOnlyMaxIntensity, MAX_BLUE_PWM);
-    analogWrite(BLUE_PWM_PIN, 255 - currentBlueIntensity);
+    analogWrite(BLUE_PWM_PIN, maxPWM - currentBlueIntensity);
     currentWhiteIntensity = map(currentTime, startTime, startTime + sunriseFadeDuration, 0, MAX_WHITE_PWM);
-    analogWrite(WHITE_PWM_PIN, 255 - currentWhiteIntensity);
-
-#ifdef debuging
-    Serial.print("currentBlueIntensity = ");
-    Serial.println(currentBlueIntensity);
-    Serial.print("currentWhiteIntensity = ");
-    Serial.println(currentWhiteIntensity);
-#endif
-  }
-
-  //  highNoon
-  startTime = millis();
-  while (startTime + highNoonDuration > currentTime)
-  {
-    delay(wait);
-    currentTime = millis();
-    analogWrite(BLUE_PWM_PIN, 255 - MAX_BLUE_PWM);
-    analogWrite(WHITE_PWM_PIN, 255 - MAX_WHITE_PWM);
-
-#ifdef debuging
-    Serial.print("currentBlueIntensity = ");
-    Serial.println(currentBlueIntensity);
-    Serial.print("currentWhiteIntensity = ");
-    Serial.println(currentWhiteIntensity);
-#endif
-  }
-
-  //  Fade blue and white to sunset
-  startTime = millis();
-  while (startTime + sunsetFadeDuration > currentTime)
-  {
-    delay(wait);
-    currentTime = millis();
-    //                         map( inputValue, low range input, high range input, low range output, high range output);
-    currentBlueIntensity = map(currentTime, startTime, startTime + sunsetFadeDuration, MAX_BLUE_PWM, blueOnlyMaxIntensity);
-    analogWrite(BLUE_PWM_PIN, 255 - currentBlueIntensity);
-    currentWhiteIntensity = map(currentTime, startTime, startTime + sunsetFadeDuration, MAX_WHITE_PWM, 0);
-    analogWrite(WHITE_PWM_PIN, 255 - currentWhiteIntensity);
-
-#ifdef debuging
-    Serial.print("currentBlueIntensity = ");
-    Serial.println(currentBlueIntensity);
-    Serial.print("currentWhiteIntensity = ");
-    Serial.println(currentWhiteIntensity);
-#endif
-  }
-
-  //  Fade blueOnly down
-  startTime = millis();
-  while (startTime + blueOnlyDuration > currentTime)
-  {
-    delay(wait);
-    currentTime = millis();
-    currentBlueIntensity = map(currentTime, startTime, startTime + blueOnlyDuration, blueOnlyMaxIntensity, 0);
-    analogWrite(BLUE_PWM_PIN, currentBlueIntensity);
-
+    analogWrite(WHITE_PWM_PIN, maxPWM - currentWhiteIntensity);
+    
     if (currentBlueIntensity < 5)
     {
       digitalWrite(BLUE_RELAY, 0);
-      digitalWrite(WHITE_RELAY, 0);
     }
     else
     {
       digitalWrite(BLUE_RELAY, 1);
+    }
+
+    if (currentWhiteIntensity < 5)
+    {
+      digitalWrite(WHITE_RELAY, 0);
+    }
+    else
+    {
       digitalWrite(WHITE_RELAY, 1);
     }
 
@@ -269,20 +242,162 @@ void DemoLoop() ////////////////////////////////////////////////////////////////
     Serial.println(digitalRead(WHITE_RELAY));
 #endif
   }
-  //  nightTime
+
+  //---------------------------------------------------------------- highNoon ---------------------------------------------------------------
   startTime = millis();
-  while (startTime + nightTime > currentTime)
+  while (startTime + highNoonDuration > currentTime)
   {
     delay(wait);
     currentTime = millis();
-    analogWrite(BLUE_PWM_PIN, 255);
-    analogWrite(WHITE_PWM_PIN, 255);
+    analogWrite(BLUE_PWM_PIN, maxPWM - MAX_BLUE_PWM);
+    analogWrite(WHITE_PWM_PIN, maxPWM - MAX_WHITE_PWM);
+    
+    if (currentBlueIntensity < 5)
+    {
+      digitalWrite(BLUE_RELAY, 0);
+    }
+    else
+    {
+      digitalWrite(BLUE_RELAY, 1);
+    }
+
+    if (currentWhiteIntensity < 5)
+    {
+      digitalWrite(WHITE_RELAY, 0);
+    }
+    else
+    {
+      digitalWrite(WHITE_RELAY, 1);
+    }
 
 #ifdef debuging
     Serial.print("currentBlueIntensity = ");
     Serial.println(currentBlueIntensity);
     Serial.print("currentWhiteIntensity = ");
     Serial.println(currentWhiteIntensity);
+    Serial.print("Blue relay = ");
+    Serial.println(digitalRead(BLUE_RELAY));
+    Serial.print("White relay = ");
+    Serial.println(digitalRead(WHITE_RELAY));
+#endif
+  }
+
+  //----------------------------------------------------------- Fade blue and white to sunset --------------------------------------------------
+  startTime = millis();
+  while (startTime + sunsetFadeDuration > currentTime)
+  {
+    delay(wait);
+    currentTime = millis();
+    //                         map( inputValue, low range input, high range input, low range output, high range output);
+    currentBlueIntensity = map(currentTime, startTime, startTime + sunsetFadeDuration, MAX_BLUE_PWM, blueOnlyMaxIntensity);
+    analogWrite(BLUE_PWM_PIN, maxPWM - currentBlueIntensity);
+    currentWhiteIntensity = map(currentTime, startTime, startTime + sunsetFadeDuration, MAX_WHITE_PWM, 0);
+    analogWrite(WHITE_PWM_PIN, maxPWM - currentWhiteIntensity);
+    
+    if (currentBlueIntensity < 5)
+    {
+      digitalWrite(BLUE_RELAY, 0);
+    }
+    else
+    {
+      digitalWrite(BLUE_RELAY, 1);
+    }
+
+    if (currentWhiteIntensity < 5)
+    {
+      digitalWrite(WHITE_RELAY, 0);
+    }
+    else
+    {
+      digitalWrite(WHITE_RELAY, 1);
+    }
+
+#ifdef debuging
+    Serial.print("currentBlueIntensity = ");
+    Serial.println(currentBlueIntensity);
+    Serial.print("currentWhiteIntensity = ");
+    Serial.println(currentWhiteIntensity);
+    Serial.print("Blue relay = ");
+    Serial.println(digitalRead(BLUE_RELAY));
+    Serial.print("White relay = ");
+    Serial.println(digitalRead(WHITE_RELAY));
+#endif
+  }
+
+  //------------------------------------------------------- Fade blueOnly down -----------------------------------------------------------------------
+  startTime = millis();
+  while (startTime + blueOnlyDuration > currentTime)
+  {
+    delay(wait);
+    currentTime = millis();
+    currentBlueIntensity = map(currentTime, startTime, startTime + blueOnlyDuration, blueOnlyMaxIntensity, 0);
+    analogWrite(BLUE_PWM_PIN, currentBlueIntensity);
+
+    if (currentBlueIntensity < 5)
+    {
+      digitalWrite(BLUE_RELAY, 0);
+    }
+    else
+    {
+      digitalWrite(BLUE_RELAY, 1);
+    }
+
+    if (currentWhiteIntensity < 5)
+    {
+      digitalWrite(WHITE_RELAY, 0);
+    }
+    else
+    {
+      digitalWrite(WHITE_RELAY, 1);
+    }
+
+#ifdef debuging
+    Serial.print("currentBlueIntensity = ");
+    Serial.println(currentBlueIntensity);
+    Serial.print("currentWhiteIntensity = ");
+    Serial.println(currentWhiteIntensity);
+    Serial.print("Blue relay = ");
+    Serial.println(digitalRead(BLUE_RELAY));
+    Serial.print("White relay = ");
+    Serial.println(digitalRead(WHITE_RELAY));
+#endif
+  }
+  //------------------------------------------------------- nightTime -----------------------------------------------------------------------
+  startTime = millis();
+  while (startTime + nightTime > currentTime)
+  {
+    delay(wait);
+    currentTime = millis();
+    analogWrite(BLUE_PWM_PIN, off);
+    analogWrite(WHITE_PWM_PIN, off);
+
+    if (currentBlueIntensity < 5)
+    {
+      digitalWrite(BLUE_RELAY, 0);
+    }
+    else
+    {
+      digitalWrite(BLUE_RELAY, 1);
+    }
+
+    if (currentWhiteIntensity < 5)
+    {
+      digitalWrite(WHITE_RELAY, 0);
+    }
+    else
+    {
+      digitalWrite(WHITE_RELAY, 1);
+    }
+
+#ifdef debuging
+    Serial.print("currentBlueIntensity = ");
+    Serial.println(currentBlueIntensity);
+    Serial.print("currentWhiteIntensity = ");
+    Serial.println(currentWhiteIntensity);
+    Serial.print("Blue relay = ");
+    Serial.println(digitalRead(BLUE_RELAY));
+    Serial.print("White relay = ");
+    Serial.println(digitalRead(WHITE_RELAY));
 #endif
   }
 }
@@ -302,34 +417,34 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
     switch (messageID)
     {
     case WHITE_MESSAGE_ID:
-      Serial.println("WHITE_LED to " + String(255 - data));
+      Serial.println("WHITE_LED to " + String(maxPWM - data));
       // PWM control of the LED based on the received data
       // TODO: Add a check for the data range
       if (data < 5)
       {
         digitalWrite(WHITE_RELAY, 0);
         delay(wait);
-        analogWrite(WHITE_PWM_PIN, 255 - data);
+        analogWrite(WHITE_PWM_PIN, maxPWM - data);
       }
       else
       {
         digitalWrite(WHITE_RELAY, 1);
-        analogWrite(WHITE_PWM_PIN, 255 - data);
+        analogWrite(WHITE_PWM_PIN, maxPWM - data);
       }
       break;
 
     case BLUE_MESSAGE_ID:
-      Serial.println("LED 2 to " + String(255 - data));
+      Serial.println("LED 2 to " + String(maxPWM - data));
       if (data < 5)
       {
         digitalWrite(BLUE_RELAY, 0);
         delay(wait);
-        analogWrite(BLUE_PWM_PIN, 255 - data);
+        analogWrite(BLUE_PWM_PIN, maxPWM - data);
       }
       else
       {
         digitalWrite(BLUE_RELAY, 1);
-        analogWrite(BLUE_PWM_PIN, 255 - data);
+        analogWrite(BLUE_PWM_PIN, maxPWM - data);
       }
       break;
     default:
