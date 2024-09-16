@@ -38,7 +38,7 @@ int highNoonDuration = 10000.0;
 int sunsetFadeDuration = 10000.0;
 int nightTime = 5000.0;
 
-int wait = 500; // delay time in milliseconds
+int wait = 100; // delay time in milliseconds
 int off = maxPWM;
 
 // Node controller core object
@@ -49,6 +49,8 @@ NodeControllerCore core;
 void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data);
 
 void DemoLoop();
+
+//-------------------------------------------------------- setup -------------------------------------------------------------------
 
 void setup()
 {
@@ -72,8 +74,8 @@ void setup()
   // RELAY pins
   pinMode(BLUE_RELAY, OUTPUT);
   pinMode(WHITE_RELAY, OUTPUT);
-  digitalWrite(WHITE_RELAY, 1); // turn on the relay
-  digitalWrite(BLUE_RELAY, 1);  // turn on the relay
+  digitalWrite(WHITE_RELAY, 0); // turn on the relay
+  digitalWrite(BLUE_RELAY, 0);  // turn on the relay
 
   // Create the node controller core object
   core = NodeControllerCore();
@@ -154,8 +156,10 @@ void loop()
 void DemoLoop() /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 {
   //-------------------------------------------------------- sunrise -------------------------------------------------------------------
-  analogWrite(BLUE_PWM_PIN, 255);
-  analogWrite(WHITE_PWM_PIN, 255);
+  analogWrite(BLUE_PWM_PIN, off);
+  analogWrite(WHITE_PWM_PIN, off);
+  digitalWrite(BLUE_RELAY, 0);
+  digitalWrite(WHITE_RELAY, 0);
   #ifdef debuging
   Serial.println("Blue LED off");
   Serial.println("White LED off");
@@ -171,10 +175,10 @@ void DemoLoop() ////////////////////////////////////////////////////////////////
   {
     delay(wait);
     currentTime = millis();
-    currentBlueIntensity = map(currentTime, startTime, startTime + blueOnlyDuration, 5, blueOnlyMaxIntensity);
+    currentBlueIntensity = map(currentTime, startTime, startTime + blueOnlyDuration, 0, blueOnlyMaxIntensity);
     analogWrite(BLUE_PWM_PIN, maxPWM - currentBlueIntensity);
     
-    if (currentBlueIntensity < 5)
+    if (currentBlueIntensity < 15)
     {
       digitalWrite(BLUE_RELAY, 0);
     }
