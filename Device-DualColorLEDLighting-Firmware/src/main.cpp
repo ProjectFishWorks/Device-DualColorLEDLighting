@@ -31,12 +31,12 @@ float MAX_BLUE_PWM = 255.0;  //      ""
 
 //  loop light durations
 int maxPWM = 255;
-int blueOnlyDuration = 10000;
-int sunriseFadeDuration = 15000;
-float blueOnlyMaxIntensity = (maxPWM * 0.5); //  Percent of max brightness
-int highNoonDuration = 10000.0;
-int sunsetFadeDuration = 10000.0;
-int nightTime = 5000.0;
+float blueOnlyMaxIntensity = (maxPWM * 0.75); //  Percent of max brightness
+int blueOnlyDuration = 5000;
+int sunriseFadeDuration = 5000;
+int highNoonDuration = 5000;
+int sunsetFadeDuration = 5000;
+int nightTime = 5000;
 
 int wait = 100; // delay time in milliseconds
 int off = maxPWM;
@@ -178,22 +178,14 @@ void DemoLoop() ////////////////////////////////////////////////////////////////
     currentBlueIntensity = map(currentTime, startTime, startTime + blueOnlyDuration, 0, blueOnlyMaxIntensity);
     analogWrite(BLUE_PWM_PIN, maxPWM - currentBlueIntensity);
     
-    if (currentBlueIntensity < 15)
+    if (currentBlueIntensity < 5)
     {
       digitalWrite(BLUE_RELAY, 0);
+      delay(wait);
     }
     else
     {
       digitalWrite(BLUE_RELAY, 1);
-    }
-
-    if (currentWhiteIntensity < 5)
-    {
-      digitalWrite(WHITE_RELAY, 0);
-    }
-    else
-    {
-      digitalWrite(WHITE_RELAY, 1);
     }
 
 #ifdef debuging
@@ -218,19 +210,11 @@ void DemoLoop() ////////////////////////////////////////////////////////////////
     analogWrite(BLUE_PWM_PIN, maxPWM - currentBlueIntensity);
     currentWhiteIntensity = map(currentTime, startTime, startTime + sunriseFadeDuration, 0, MAX_WHITE_PWM);
     analogWrite(WHITE_PWM_PIN, maxPWM - currentWhiteIntensity);
-    
-    if (currentBlueIntensity < 5)
-    {
-      digitalWrite(BLUE_RELAY, 0);
-    }
-    else
-    {
-      digitalWrite(BLUE_RELAY, 1);
-    }
 
     if (currentWhiteIntensity < 5)
     {
       digitalWrite(WHITE_RELAY, 0);
+      delay(wait);
     }
     else
     {
@@ -257,24 +241,6 @@ void DemoLoop() ////////////////////////////////////////////////////////////////
     currentTime = millis();
     analogWrite(BLUE_PWM_PIN, maxPWM - MAX_BLUE_PWM);
     analogWrite(WHITE_PWM_PIN, maxPWM - MAX_WHITE_PWM);
-    
-    if (currentBlueIntensity < 5)
-    {
-      digitalWrite(BLUE_RELAY, 0);
-    }
-    else
-    {
-      digitalWrite(BLUE_RELAY, 1);
-    }
-
-    if (currentWhiteIntensity < 5)
-    {
-      digitalWrite(WHITE_RELAY, 0);
-    }
-    else
-    {
-      digitalWrite(WHITE_RELAY, 1);
-    }
 
 #ifdef debuging
     Serial.print("currentBlueIntensity = ");
@@ -299,19 +265,11 @@ void DemoLoop() ////////////////////////////////////////////////////////////////
     analogWrite(BLUE_PWM_PIN, maxPWM - currentBlueIntensity);
     currentWhiteIntensity = map(currentTime, startTime, startTime + sunsetFadeDuration, MAX_WHITE_PWM, 0);
     analogWrite(WHITE_PWM_PIN, maxPWM - currentWhiteIntensity);
-    
-    if (currentBlueIntensity < 5)
-    {
-      digitalWrite(BLUE_RELAY, 0);
-    }
-    else
-    {
-      digitalWrite(BLUE_RELAY, 1);
-    }
 
     if (currentWhiteIntensity < 5)
     {
       digitalWrite(WHITE_RELAY, 0);
+      delay(wait);
     }
     else
     {
@@ -336,25 +294,18 @@ void DemoLoop() ////////////////////////////////////////////////////////////////
   {
     delay(wait);
     currentTime = millis();
-    currentBlueIntensity = map(currentTime, startTime, startTime + blueOnlyDuration, blueOnlyMaxIntensity, 0);
-    analogWrite(BLUE_PWM_PIN, currentBlueIntensity);
+    currentBlueIntensity = map(currentTime, startTime, startTime + blueOnlyDuration, (int)blueOnlyMaxIntensity, 0);
+    analogWrite(BLUE_PWM_PIN, maxPWM - currentBlueIntensity);
 
-    if (currentBlueIntensity < 5)
+    if (currentBlueIntensity < 50)
     {
-      digitalWrite(BLUE_RELAY, 0);
+        digitalWrite(BLUE_RELAY, 0);
+        delay(wait);
+        analogWrite(BLUE_PWM_PIN, maxPWM - currentBlueIntensity);
     }
     else
     {
       digitalWrite(BLUE_RELAY, 1);
-    }
-
-    if (currentWhiteIntensity < 5)
-    {
-      digitalWrite(WHITE_RELAY, 0);
-    }
-    else
-    {
-      digitalWrite(WHITE_RELAY, 1);
     }
 
 #ifdef debuging
@@ -377,23 +328,6 @@ void DemoLoop() ////////////////////////////////////////////////////////////////
     analogWrite(BLUE_PWM_PIN, off);
     analogWrite(WHITE_PWM_PIN, off);
 
-    if (currentBlueIntensity < 5)
-    {
-      digitalWrite(BLUE_RELAY, 0);
-    }
-    else
-    {
-      digitalWrite(BLUE_RELAY, 1);
-    }
-
-    if (currentWhiteIntensity < 5)
-    {
-      digitalWrite(WHITE_RELAY, 0);
-    }
-    else
-    {
-      digitalWrite(WHITE_RELAY, 1);
-    }
 
 #ifdef debuging
     Serial.print("currentBlueIntensity = ");
