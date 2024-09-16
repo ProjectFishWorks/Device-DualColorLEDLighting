@@ -156,8 +156,10 @@ void DemoLoop() ////////////////////////////////////////////////////////////////
   //-------------------------------------------------------- sunrise -------------------------------------------------------------------
   analogWrite(BLUE_PWM_PIN, 255);
   analogWrite(WHITE_PWM_PIN, 255);
+  #ifdef debuging
   Serial.println("Blue LED off");
   Serial.println("White LED off");
+  #endif
   unsigned long currentTime = millis();
   unsigned long startTime = millis();
   unsigned long blueEndTime = millis();
