@@ -15,6 +15,9 @@ char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursd
 #define NODE_ID 0xA1            // 161
 #define WHITE_MESSAGE_ID 0x0A00 // 2560
 #define BLUE_MESSAGE_ID 0x0A01  // 2561
+#define DAWN_MESSAGE_ID 0x0A02  // 2562
+#define DUSK_MESSAGE_ID 0x0A03  // 2563
+#define SUNRISE_MESSAGE_ID 0x0A04  // 2564
 
 #define debuging
 
@@ -387,6 +390,7 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
         analogWrite(BLUE_PWM_PIN, maxPWM - data);
       }
       break;
+      case
     default:
       break;
     }
