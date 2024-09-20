@@ -3,6 +3,7 @@
 #include <RTClib.h>
 #include <Wire.h>
 #include <SPI.h>
+#define debuging
 
 RTC_DS3231 rtc; // Create the RTC object
 
@@ -12,21 +13,21 @@ RTC_DS3231 rtc; // Create the RTC object
 
 char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 
-#define NODE_ID 0xA1                              // 161
-#define WHITE_MESSAGE_ID 0x0A00                   // 2560
-#define BLUE_MESSAGE_ID 0x0A01                    // 2561
-#define DAWN_MESSAGE_ID 0x0A02                    // 2562
-#define DUSK_MESSAGE_ID 0x0A03                    // 2563
-#define SUNRISE_MESSAGE_ID 0x0A04                 // 2564
-#define SUNSET_MESSAGE_ID 0x0A05                  // 2565
-#define HIGH_NOON_MESSAGE_ID 0x0A06               // 2566
-#define NIGHT_TIME_MESSAGE_ID 0x0A07              // 2567
-#define BLUE_ONLY_MAX_INTENSITY_MESSAGE_ID 0x0A08 // 2568
-#define CURRENT_WHITE_MESSAGE_ID 0x0A09           // 2569
-#define CURRENT_BLUE_MESSAGE_ID 0x0A0A            // 2570
-#define MANUAL_LED_CONTROL_OVERRIDE_SWITCH 0x0A0B // 2571
-#define OVERRIDE_WHITE_INTENSITY 0x0A0C           // 2572
-#define OVERRIDE_BLUE_INTENSITY 0x0A0D            // 2573
+#define NODE_ID 0xA1                                // 161
+#define WHITE_MESSAGE_ID 0x0A00                     // 2560
+#define BLUE_MESSAGE_ID 0x0A01                      // 2561
+#define DAWN_MESSAGE_ID 0x0A02                      // 2562
+#define DUSK_MESSAGE_ID 0x0A03                      // 2563
+#define SUNRISE_MESSAGE_ID 0x0A04                   // 2564
+#define SUNSET_MESSAGE_ID 0x0A05                    // 2565
+#define HIGH_NOON_MESSAGE_ID 0x0A06                 // 2566
+#define NIGHT_TIME_MESSAGE_ID 0x0A07                // 2567
+#define BLUE_ONLY_MAX_INTENSITY_MESSAGE_ID 0x0A08   // 2568
+#define CURRENT_WHITE_MESSAGE_ID 0x0A09             // 2569
+#define CURRENT_BLUE_MESSAGE_ID 0x0A0A              // 2570
+#define MANUAL_OVERRIDE_SWITCH_MESSAGE_ID 0x0A0B    // 2571
+#define OVERRIDE_WHITE_INTENSITY_MESSAGE_ID 0x0A0C  // 2572
+#define OVERRIDE_BLUE_INTENSITY_MESSAGE_ID 0x0A0D   // 2573
 
 /*        public bool ManualLEDControlOverrideSwitch
         {
@@ -67,8 +68,6 @@ char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursd
             }
         }*/
 
-#define debuging
-
 // LED pins
 #define WHITE_PWM_PIN 3
 #define BLUE_PWM_PIN 2
@@ -96,6 +95,8 @@ int wait = 100;                         // delay time in milliseconds
 int currentBlueIntensity;
 int currentWhiteIntensity;
 bool ManualLEDControlOverrideSwitch = false;
+int OverrideWhiteIntensity = 0;
+int OverrideBlueIntensity = 0;
 
 // Node controller core object
 NodeControllerCore core;
@@ -228,7 +229,6 @@ void loop()
 void DemoLoop()
 {
   //-------------------------------------------------------- sunrise -------------------------------------------------------------------
-  chkManualLEDControlOverrideSwitch();
 
   analogWrite(BLUE_PWM_PIN, off);
   analogWrite(WHITE_PWM_PIN, off);
@@ -244,6 +244,7 @@ void DemoLoop()
   //  Fade blueOnly up
   while (startTime + dawnBlueOnlyDuration > currentTime)
   {
+    chkManualLEDControlOverrideSwitch();
     delay(wait);
     currentTime = millis();
     currentBlueIntensity = map(currentTime, startTime, startTime + dawnBlueOnlyDuration, 0, blueOnlyMaxIntensity);
@@ -274,11 +275,11 @@ void DemoLoop()
   }
 
   //--------------------------------------------------------- Fade blue and white to highNoon --------------------------------------------------
-  chkManualLEDControlOverrideSwitch();
 
   startTime = millis();
   while (startTime + sunriseFadeDuration > currentTime)
   {
+    chkManualLEDControlOverrideSwitch();
     delay(wait);
     currentTime = millis();
     //                     map( inputValue, low range input, high range input, low range output, high range output);
@@ -316,11 +317,11 @@ void DemoLoop()
   }
 
   //---------------------------------------------------------------- highNoon ---------------------------------------------------------------
-  chkManualLEDControlOverrideSwitch();
-  
+
   startTime = millis();
   while (startTime + highNoonDuration > currentTime)
   {
+    chkManualLEDControlOverrideSwitch();
     delay(wait);
     currentTime = millis();
     analogWrite(BLUE_PWM_PIN, maxPWM - MAX_BLUE_PWM);
@@ -343,11 +344,11 @@ void DemoLoop()
   }
 
   //----------------------------------------------------------- Fade blue and white to sunset --------------------------------------------------
-  chkManualLEDControlOverrideSwitch();
 
   startTime = millis();
   while (startTime + sunsetFadeDuration > currentTime)
   {
+    chkManualLEDControlOverrideSwitch();
     delay(wait);
     currentTime = millis();
     //                         map( inputValue, low range input, high range input, low range output, high range output);
@@ -383,11 +384,11 @@ void DemoLoop()
   }
 
   //------------------------------------------------------- Fade blueOnly down -----------------------------------------------------------------------
-  chkManualLEDControlOverrideSwitch();
 
   startTime = millis();
   while (startTime + dawnBlueOnlyDuration > currentTime)
   {
+    chkManualLEDControlOverrideSwitch();
     delay(wait);
     currentTime = millis();
     currentBlueIntensity = map(currentTime, startTime, startTime + dawnBlueOnlyDuration, (int)blueOnlyMaxIntensity, 0);
@@ -416,11 +417,11 @@ void DemoLoop()
 #endif
   }
   //------------------------------------------------------- nightTime -----------------------------------------------------------------------
-  chkManualLEDControlOverrideSwitch();
-  
+
   startTime = millis();
   while (startTime + nightTime > currentTime)
   {
+    chkManualLEDControlOverrideSwitch();
     delay(wait);
     currentTime = millis();
     analogWrite(BLUE_PWM_PIN, off);
@@ -454,36 +455,17 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
     switch (messageID)
     {
       // ---------------------Demo override control messages-------------------------
-    case WHITE_MESSAGE_ID:
-      Serial.println("WHITE_LED to " + String(maxPWM - data));
-      // PWM control of the LED based on the received data
-      // TODO: Add a check for the data range
-      if (data < 5)
-      {
-        digitalWrite(WHITE_RELAY, 0);
-        delay(wait);
-        analogWrite(WHITE_PWM_PIN, maxPWM - data);
-      }
-      else
-      {
-        digitalWrite(WHITE_RELAY, 1);
-        analogWrite(WHITE_PWM_PIN, maxPWM - data);
-      }
+    case MANUAL_OVERRIDE_SWITCH_MESSAGE_ID:
+      ManualLEDControlOverrideSwitch = data;
+      Serial.println("Manual LED Control Override Switch set to " + String(data));
       break;
 
-    case BLUE_MESSAGE_ID:
-      Serial.println("LED 2 to " + String(maxPWM - data));
-      if (data < 5)
-      {
-        digitalWrite(BLUE_RELAY, 0);
-        delay(wait);
-        analogWrite(BLUE_PWM_PIN, maxPWM - data);
-      }
-      else
-      {
-        digitalWrite(BLUE_RELAY, 1);
-        analogWrite(BLUE_PWM_PIN, maxPWM - data);
-      }
+    case OVERRIDE_WHITE_INTENSITY_MESSAGE_ID:
+      OverrideWhiteIntensity = data;
+      break;
+
+    case OVERRIDE_BLUE_INTENSITY_MESSAGE_ID:
+      OverrideBlueIntensity = data;
       break;
 
       //  -----------------Demo control messages--------------------------------
@@ -523,11 +505,6 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
       Serial.println("Blue Only Max Intensity set to " + String(data));
       break;
 
-    case MANUAL_LED_CONTROL_OVERRIDE_SWITCH:
-      ManualLEDControlOverrideSwitch = data;
-      Serial.println("Manual LED Control Override Switch set to " + String(data));
-      break;
-
     default:
       break;
     }
@@ -540,6 +517,8 @@ void SendLEDIntensities(void *parameters)
 {
   while (1)
   {
+    if(ManualLEDControlOverrideSwitch == false)
+    {
     uint64_t WhiteIntensity;
     uint64_t BlueIntensity;
     WhiteIntensity = currentWhiteIntensity;
@@ -548,27 +527,59 @@ void SendLEDIntensities(void *parameters)
     delay(sendMessageLEDIntensityDelay);
     core.sendMessage(CURRENT_BLUE_MESSAGE_ID, &BlueIntensity);
     delay(sendMessageLEDIntensityDelay);
+    }
+    else
+    {
+      uint64_t WhiteIntensity;
+      uint64_t BlueIntensity;
+      WhiteIntensity = OverrideWhiteIntensity;
+      BlueIntensity = OverrideBlueIntensity;
+      core.sendMessage(CURRENT_WHITE_MESSAGE_ID, &WhiteIntensity); // Send the white LED intensity
+      delay(sendMessageLEDIntensityDelay);
+      core.sendMessage(CURRENT_BLUE_MESSAGE_ID, &BlueIntensity);
+      delay(sendMessageLEDIntensityDelay);
+    }
   }
 }
 
 void chkManualLEDControlOverrideSwitch()
 {
-  if (ManualLEDControlOverrideSwitch == true)
-  {
-    digitalWrite(BLUE_RELAY, 1);
-    digitalWrite(WHITE_RELAY, 1);
-    analogWrite(WHITE_PWM_PIN, maxPWM - OVERRIDE_WHITE_INTENSITY);
-    analogWrite(BLUE_PWM_PIN, maxPWM - OVERRIDE_BLUE_INTENSITY);
-    delay(wait);
+  while (ManualLEDControlOverrideSwitch == true)
+  {      
+      if (OverrideWhiteIntensity < 5)
+      {
+        digitalWrite(WHITE_RELAY, 0);
+        delay(wait);
+        analogWrite(WHITE_PWM_PIN, off);
+      }
+      else
+      {
+        digitalWrite(WHITE_RELAY, 1);
+        analogWrite(WHITE_PWM_PIN, maxPWM - OverrideWhiteIntensity);
+      }
+      if (OverrideBlueIntensity < 5)
+      {
+        digitalWrite(BLUE_RELAY, 0);
+        delay(wait);
+        analogWrite(BLUE_PWM_PIN, off);
+      }
+      else
+      {
+        digitalWrite(BLUE_RELAY, 1);
+        analogWrite(BLUE_PWM_PIN, maxPWM - OverrideBlueIntensity);
+      }
 
+
+
+    analogWrite(WHITE_PWM_PIN, maxPWM - OverrideWhiteIntensity);
 #ifdef debuging
     Serial.println("Manual LED control override switch is on");
     Serial.println("Blue relay on");
     Serial.println("White relay on");
     Serial.print("Override white intensity = ");
-    Serial.println(OVERRIDE_WHITE_INTENSITY);
+    Serial.println(OverrideWhiteIntensity);
     Serial.print("Override blue intensity = ");
-    Serial.println(OVERRIDE_BLUE_INTENSITY);
+    Serial.println(OverrideBlueIntensity);
 #endif
   }
 }
