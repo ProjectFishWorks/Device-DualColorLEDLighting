@@ -546,7 +546,7 @@ void chkManualLEDControlOverrideSwitch()
 {
   while (ManualLEDControlOverrideSwitch == true)
   {      
-      if (OverrideWhiteIntensity < 5)
+      if (OverrideWhiteIntensity < 10)
       {
         digitalWrite(WHITE_RELAY, 0);
         delay(wait);
@@ -557,7 +557,7 @@ void chkManualLEDControlOverrideSwitch()
         digitalWrite(WHITE_RELAY, 1);
         analogWrite(WHITE_PWM_PIN, maxPWM - OverrideWhiteIntensity);
       }
-      if (OverrideBlueIntensity < 5)
+      if (OverrideBlueIntensity < 10)
       {
         digitalWrite(BLUE_RELAY, 0);
         delay(wait);
