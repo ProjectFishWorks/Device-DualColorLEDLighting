@@ -3,7 +3,12 @@
 #include <RTClib.h>
 #include <Wire.h>
 #include <SPI.h>
+
 #define debuging
+
+// USE int FOR I2C PIN DEFINITIONS
+int I2C_SDA = 3;
+int I2C_SCL = 2;
 
 RTC_DS3231 rtc; // Create the RTC object
 
@@ -28,45 +33,6 @@ char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursd
 #define MANUAL_OVERRIDE_SWITCH_MESSAGE_ID 0x0A0B    // 2571
 #define OVERRIDE_WHITE_INTENSITY_MESSAGE_ID 0x0A0C  // 2572
 #define OVERRIDE_BLUE_INTENSITY_MESSAGE_ID 0x0A0D   // 2573
-
-/*        public bool ManualLEDControlOverrideSwitch
-        {
-            get
-            {
-                return _ManualLEDControlOverrideSwitch;
-            }
-            set
-            {
-                _ManualLEDControlOverrideSwitch = value;
-                sendMessageData(nodeID, 2571, (ulong)(_ManualLEDControlOverrideSwitch ? 1 : 0));
-            }
-        }
-
-        public int OverrideWhiteIntensity
-        {
-            get
-            {
-                return _OverrideWhiteIntensity;
-            }
-            set
-            {
-                _OverrideWhiteIntensity = value;
-                sendMessageData(nodeID, 2572, (ulong)_OverrideWhiteIntensity);
-            }
-        }
-
-        public int OverrideBlueIntensity
-        {
-            get
-            {
-                return _OverrideBlueIntensity;
-            }
-            set
-            {
-                _OverrideBlueIntensity = value;
-                sendMessageData(nodeID, 2573, (ulong)_OverrideBlueIntensity);
-            }
-        }*/
 
 // LED pins
 #define WHITE_PWM_PIN 3
@@ -101,7 +67,8 @@ int OverrideBlueIntensity = 0;
 // Node controller core object
 NodeControllerCore core;
 
-// put function declarations here:
+//--------------------------------------------- put function declarations here:----------------------------------------------------
+
 // Callback function for received messages from the CAN bus
 void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data);
 
@@ -119,8 +86,10 @@ void setup()
   Serial.begin(115200);
 
   // Initialize the I2C bus for RTC
-
-  Wire.begin(5, 10); // Wire.begin(SDA, SCL)
+  // Initialize the OneWire communication
+  Wire.begin(I2C_SDA, I2C_SCL);
+  
+  //I2C DS3231 addresses 0x57 of 0x68
   if (!rtc.begin(&Wire))
   {
     Serial.println("Couldn't find RTC");
@@ -517,7 +486,7 @@ void SendLEDIntensities(void *parameters)
 {
   while (1)
   {
-    if(ManualLEDControlOverrideSwitch == false)
+    if(!ManualLEDControlOverrideSwitch)
     {
     uint64_t WhiteIntensity;
     uint64_t BlueIntensity;
@@ -544,7 +513,7 @@ void SendLEDIntensities(void *parameters)
 
 void chkManualLEDControlOverrideSwitch()
 {
-  while (ManualLEDControlOverrideSwitch == true)
+  while (ManualLEDControlOverrideSwitch)
   {      
       if (OverrideWhiteIntensity < 10)
       {
