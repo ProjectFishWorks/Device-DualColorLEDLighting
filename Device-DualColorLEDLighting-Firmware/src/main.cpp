@@ -35,11 +35,11 @@ char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursd
 #define OVERRIDE_BLUE_INTENSITY_MESSAGE_ID 0x0A0D   // 2573
 
 // LED pins
-#define WHITE_PWM_PIN 3
-#define BLUE_PWM_PIN 2
+#define WHITE_PWM_PIN 1
+#define BLUE_PWM_PIN 0
 // RELAY pins
-#define BLUE_RELAY 4
-#define WHITE_RELAY 5
+#define BLUE_RELAY 2
+#define WHITE_RELAY 3
 
 //  Max LED Intensities
 float MAX_WHITE_PWM = 255.0; // 255 is max
@@ -56,7 +56,7 @@ int sunsetFadeDuration = 5000;
 int duskBlueOnlyDuration = 5000;
 int nightTime = 5000;
 
-int sendMessageLEDIntensityDelay = 500; // frequency of sending LED intensity messages to the App
+int sendMessageLEDIntensityDelay = 2000; // frequency of sending LED intensity messages to the App
 int wait = 100;                         // delay time in milliseconds
 int currentBlueIntensity;
 int currentWhiteIntensity;
