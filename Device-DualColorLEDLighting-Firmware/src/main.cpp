@@ -33,6 +33,8 @@ char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursd
 #define MANUAL_OVERRIDE_SWITCH_MESSAGE_ID 0x0A0B    // 2571
 #define OVERRIDE_WHITE_INTENSITY_MESSAGE_ID 0x0A0C  // 2572
 #define OVERRIDE_BLUE_INTENSITY_MESSAGE_ID 0x0A0D   // 2573
+#define MAX_WHITE_INTENSITY_MESSAGE_ID 0x0A0E       // 2574
+#define MAX_BLUE_INTENSITY_MESSAGE_ID 0x0A0F        // 2575
 
 // LED pins
 #define WHITE_PWM_PIN 3
@@ -40,6 +42,11 @@ char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursd
 // RELAY pins
 #define BLUE_RELAY 4
 #define WHITE_RELAY 5
+
+
+#define sendMessageLEDIntensityDelay 500 // frequency of sending LED intensity messages to the App
+#define sendMessageDelay 100                         // delay time in milliseconds
+#define MessageGap 5000                              // delay time in milliseconds
 
 //  Max LED Intensities
 float MAX_WHITE_PWM = 255.0; // 255 is max
@@ -57,8 +64,6 @@ int sunsetFadeDuration = 5000;
 int duskBlueOnlyDuration = 5000;
 int nightTime = 5000;
 
-int sendMessageLEDIntensityDelay = 500; // frequency of sending LED intensity messages to the App
-int wait = 100;                         // delay time in milliseconds
 int currentBlueIntensity;
 int currentWhiteIntensity;
 bool ManualLEDControlOverrideSwitch = false;
@@ -216,7 +221,7 @@ void DemoLoop()
   while (startTime + dawnBlueOnlyDuration > currentTime)
   {
     chkManualLEDControlOverrideSwitch();
-    delay(wait);
+    delay(sendMessageDelay);
     currentTime = millis();
     blueOnlyMaxIntensity = (int)blueOnlyMaxIntensityFloat;
     currentBlueIntensity = map(currentTime, startTime, startTime + dawnBlueOnlyDuration, 0, blueOnlyMaxIntensity);
@@ -225,7 +230,7 @@ void DemoLoop()
     if (currentBlueIntensity < 5)
     {
       digitalWrite(BLUE_RELAY, 0);
-      delay(wait);
+      delay(sendMessageDelay);
     }
     else
     {
@@ -252,7 +257,7 @@ void DemoLoop()
   while (startTime + sunriseFadeDuration > currentTime)
   {
     chkManualLEDControlOverrideSwitch();
-    delay(wait);
+    delay(sendMessageDelay);
     currentTime = millis();
     //                     map( inputValue, low range input, high range input, low range output, high range output);
     currentBlueIntensity = map(currentTime, startTime, startTime + sunriseFadeDuration, blueOnlyMaxIntensity, MAX_BLUE_PWM);
@@ -263,7 +268,7 @@ void DemoLoop()
     if (currentWhiteIntensity < 5)
     {
       digitalWrite(WHITE_RELAY, 0);
-      delay(wait);
+      delay(sendMessageDelay);
     }
     else
     {
@@ -294,7 +299,7 @@ void DemoLoop()
   while (startTime + highNoonDuration > currentTime)
   {
     chkManualLEDControlOverrideSwitch();
-    delay(wait);
+    delay(sendMessageDelay);
     currentTime = millis();
     analogWrite(BLUE_PWM_PIN, maxPWM - MAX_BLUE_PWM);
     analogWrite(WHITE_PWM_PIN, maxPWM - MAX_WHITE_PWM);
@@ -321,7 +326,7 @@ void DemoLoop()
   while (startTime + sunsetFadeDuration > currentTime)
   {
     chkManualLEDControlOverrideSwitch();
-    delay(wait);
+    delay(sendMessageDelay);
     currentTime = millis();
     //                         map( inputValue, low range input, high range input, low range output, high range output);
     currentBlueIntensity = map(currentTime, startTime, startTime + sunsetFadeDuration, MAX_BLUE_PWM, blueOnlyMaxIntensity);
@@ -332,7 +337,7 @@ void DemoLoop()
     if (currentWhiteIntensity < 5)
     {
       digitalWrite(WHITE_RELAY, 0);
-      delay(wait);
+      delay(sendMessageDelay);
     }
     else
     {
@@ -361,7 +366,7 @@ void DemoLoop()
   while (startTime + dawnBlueOnlyDuration > currentTime)
   {
     chkManualLEDControlOverrideSwitch();
-    delay(wait);
+    delay(sendMessageDelay);
     currentTime = millis();
     currentBlueIntensity = map(currentTime, startTime, startTime + dawnBlueOnlyDuration, (int)blueOnlyMaxIntensity, 0);
     analogWrite(BLUE_PWM_PIN, maxPWM - currentBlueIntensity);
@@ -369,7 +374,7 @@ void DemoLoop()
     if (currentBlueIntensity < 50)
     {
       digitalWrite(BLUE_RELAY, 0);
-      delay(wait);
+      delay(sendMessageDelay);
       analogWrite(BLUE_PWM_PIN, maxPWM - currentBlueIntensity);
     }
     else
@@ -394,7 +399,7 @@ void DemoLoop()
   while (startTime + nightTime > currentTime)
   {
     chkManualLEDControlOverrideSwitch();
-    delay(wait);
+    delay(sendMessageDelay);
     currentTime = millis();
     analogWrite(BLUE_PWM_PIN, off);
     analogWrite(WHITE_PWM_PIN, off);
@@ -477,6 +482,16 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
       Serial.println("Blue Only Max Intensity set to " + String(data));
       break;
 
+    case MAX_WHITE_INTENSITY_MESSAGE_ID:
+      MAX_WHITE_PWM = ((maxPWM / 100.0) * data);
+      Serial.println("Max White Intensity set to " + String(data));
+      break;
+
+    case MAX_BLUE_INTENSITY_MESSAGE_ID:
+      MAX_BLUE_PWM = ((maxPWM / 100.0) * data);
+      Serial.println("Max Blue Intensity set to " + String(data));
+      break;
+
     default:
       break;
     }
@@ -521,7 +536,7 @@ void chkManualLEDControlOverrideSwitch()
       if (OverrideWhiteIntensity < 10)
       {
         digitalWrite(WHITE_RELAY, 0);
-        delay(wait);
+        delay(sendMessageDelay);
         analogWrite(WHITE_PWM_PIN, off);
       }
       else
@@ -532,7 +547,7 @@ void chkManualLEDControlOverrideSwitch()
       if (OverrideBlueIntensity < 10)
       {
         digitalWrite(BLUE_RELAY, 0);
-        delay(wait);
+        delay(sendMessageDelay);
         analogWrite(BLUE_PWM_PIN, off);
       }
       else
