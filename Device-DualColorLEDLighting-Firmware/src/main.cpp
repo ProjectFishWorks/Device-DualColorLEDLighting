@@ -64,8 +64,6 @@ int sunsetFadeDuration = 5000;
 int duskBlueOnlyDuration = 5000;
 int nightTime = 5000;
 
-int sendMessageLEDIntensityDelay = 2000; // frequency of sending LED intensity messages to the App
-int wait = 100;                         // delay time in milliseconds
 int currentBlueIntensity;
 int currentWhiteIntensity;
 bool ManualLEDControlOverrideSwitch = false;
