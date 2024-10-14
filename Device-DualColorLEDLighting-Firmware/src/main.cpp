@@ -7,8 +7,8 @@
 #define debuging
 
 // USE int FOR I2C PIN DEFINITIONS
-int I2C_SDA = 3;
-int I2C_SCL = 2;
+int I2C_SDA = 2;
+int I2C_SCL = 3;
 
 RTC_DS3231 rtc; // Create the RTC object
 
@@ -48,7 +48,8 @@ float MAX_BLUE_PWM = 255.0;  //      ""
 //  loop light durations
 int maxPWM = 255;
 int off = maxPWM;                             // 0 is max
-float blueOnlyMaxIntensity = (maxPWM * 0.75); //  Percent of max brightness
+float blueOnlyMaxIntensityFloat = (maxPWM * 0.75); //  Percent of max brightness
+int blueOnlyMaxIntensity = (int)blueOnlyMaxIntensityFloat;
 int dawnBlueOnlyDuration = 5000;
 int sunriseFadeDuration = 5000;
 int highNoonDuration = 5000;
@@ -143,13 +144,13 @@ void loop()
 {
   DemoLoop();
 
-  /*
+  
     DateTime now = rtc.now();
 
     Serial.print(now.year(), DEC);
-    Serial.print('/');
+    Serial.print(' ');
     Serial.print(now.month(), DEC);
-    Serial.print('/');
+    Serial.print(' ');
     Serial.print(now.day(), DEC);
     Serial.print(" (");
     Serial.print(daysOfTheWeek[now.dayOfTheWeek()]);
@@ -159,9 +160,9 @@ void loop()
     Serial.print(now.minute(), DEC);
     Serial.print(':');
     Serial.print(now.second(), DEC);
-    Serial.println();
 
-    Serial.print(" since midnight 1/1/1970 = ");
+
+    /*Serial.print(" since midnight 1/1/1970 = ");
     Serial.print(now.unixtime());
     Serial.print("s = ");
     Serial.print(now.unixtime() / 86400L);
@@ -189,8 +190,9 @@ void loop()
     Serial.println(" C");
 
     Serial.println();
-    delay(3000);
     */
+    delay(1000);
+    
 }
 
 ////////////////////////////////////////////// put function definitions here:  /////////////////////////////////////////////////////////
@@ -216,6 +218,7 @@ void DemoLoop()
     chkManualLEDControlOverrideSwitch();
     delay(wait);
     currentTime = millis();
+    blueOnlyMaxIntensity = (int)blueOnlyMaxIntensityFloat;
     currentBlueIntensity = map(currentTime, startTime, startTime + dawnBlueOnlyDuration, 0, blueOnlyMaxIntensity);
     analogWrite(BLUE_PWM_PIN, maxPWM - currentBlueIntensity);
 
@@ -470,7 +473,7 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
       break;
 
     case BLUE_ONLY_MAX_INTENSITY_MESSAGE_ID:
-      blueOnlyMaxIntensity = data;
+      blueOnlyMaxIntensityFloat = ((maxPWM / 100.0) * data);
       Serial.println("Blue Only Max Intensity set to " + String(data));
       break;
 
