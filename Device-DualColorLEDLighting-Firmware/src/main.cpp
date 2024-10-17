@@ -371,7 +371,7 @@ void DemoLoop()
     currentBlueIntensity = map(currentTime, startTime, startTime + dawnBlueOnlyDuration, (int)blueOnlyMaxIntensity, 0);
     analogWrite(BLUE_PWM_PIN, maxPWM - currentBlueIntensity);
 
-    if (currentBlueIntensity < 50)
+    if (currentBlueIntensity < 25)
     {
       digitalWrite(BLUE_RELAY, 0);
       delay(sendMessageDelay);
