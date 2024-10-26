@@ -40,12 +40,12 @@ char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursd
 #define WHITE_PWM_PIN 1
 #define BLUE_PWM_PIN 0
 // RELAY pins
-#define BLUE_RELAY 2
-#define WHITE_RELAY 3
+#define BLUE_RELAY 3
+#define WHITE_RELAY 2
 
 
-#define sendMessageLEDIntensityDelay 500 // frequency of sending LED intensity messages to the App
-#define sendMessageDelay 100                         // delay time in milliseconds
+#define sendMessageLEDIntensityDelay 10000 // frequency of sending LED intensity messages to the App
+#define sendMessageDelay 1000                         // delay time in milliseconds
 #define MessageGap 5000                              // delay time in milliseconds
 
 //  Max LED Intensities
