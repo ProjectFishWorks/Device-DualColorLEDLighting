@@ -206,10 +206,10 @@ void DemoLoop()
 {
   //-------------------------------------------------------- sunrise -------------------------------------------------------------------
 
-  analogWrite(BLUE_PWM_PIN, off);
-  analogWrite(WHITE_PWM_PIN, off);
-  digitalWrite(BLUE_RELAY, 0);
-  digitalWrite(WHITE_RELAY, 0);
+  analogWrite(BLUE_PWM_PIN, off);   // turn off the blue LED
+  analogWrite(WHITE_PWM_PIN, off);  // turn off the white LED
+  digitalWrite(BLUE_RELAY, 0);      // turn off the blue relay
+  digitalWrite(WHITE_RELAY, 0);     // turn off the white relay
 #ifdef debuging
   Serial.println("Blue LED off");
   Serial.println("White LED off");
@@ -218,18 +218,18 @@ void DemoLoop()
   unsigned long startTime = millis();
 
   //  Fade blueOnly up
-  while (startTime + dawnBlueOnlyDuration > currentTime)
+  while (startTime + dawnBlueOnlyDuration > currentTime)    //  while millis is between the start time and the dawnBlueonlyDuration do the following
   {
-    chkManualLEDControlOverrideSwitch();
+    chkManualLEDControlOverrideSwitch();                    //  check if the manual override switch is on
     delay(sendMessageDelay);
-    currentTime = millis();
-    blueOnlyMaxIntensity = (int)blueOnlyMaxIntensityFloat;
-    currentBlueIntensity = map(currentTime, startTime, startTime + dawnBlueOnlyDuration, 0, blueOnlyMaxIntensity);
-    analogWrite(BLUE_PWM_PIN, maxPWM - currentBlueIntensity);
+    currentTime = millis();                                 //  get the current time in milliseconds               
+    blueOnlyMaxIntensity = (int)blueOnlyMaxIntensityFloat;  //  cast the float to an int
+    currentBlueIntensity = map(currentTime, startTime, startTime + dawnBlueOnlyDuration, 0, blueOnlyMaxIntensity);    //  map the current time to the start time and the duration of the dawnBlueOnlyDuration
+    analogWrite(BLUE_PWM_PIN, maxPWM - currentBlueIntensity);   //  write the PWM value to the blue LED in reverse as off is max
 
     if (currentBlueIntensity < 5)
     {
-      digitalWrite(BLUE_RELAY, 0);
+      digitalWrite(BLUE_RELAY, 0);                            //  turn off the blue relay
       delay(sendMessageDelay);
     }
     else
