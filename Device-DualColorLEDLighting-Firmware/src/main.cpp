@@ -4,7 +4,7 @@
 #include <Wire.h>
 #include <SPI.h>
 
-#define debuging
+//#define debuging
 
 // USE int FOR I2C PIN DEFINITIONS
 int I2C_SDA = 2;
@@ -44,9 +44,9 @@ int I2C_SCL = 3;
 #define WHITE_RELAY 2
 
 
-#define sendMessageLEDIntensityDelay 2000   // frequency of sending LED intensity messages to the App
-#define updateLEDs 2000                     // delay time in milliseconds
-#define MessageGap 1000                     // delay time in milliseconds
+#define sendMessageLEDIntensityDelay 2000 // frequency of sending LED intensity messages to the App
+#define updateLEDs 100                         // delay time in milliseconds
+#define MessageGap 1000                              // delay time in milliseconds
 
 //  Max LED Intensities
 float MAX_WHITE_PWM = 255.0;                // 255 is max
@@ -372,7 +372,7 @@ void DemoLoop()
     currentBlueIntensity = map(currentTime, startTime, startTime + dawnBlueOnlyDuration, (int)blueOnlyMaxIntensity, 0);
     analogWrite(BLUE_PWM_PIN, maxPWM - currentBlueIntensity);
 
-    if (currentBlueIntensity < 25)
+    if (currentBlueIntensity < 45)
     {
       digitalWrite(BLUE_RELAY, 0);
       delay(updateLEDs);
@@ -545,8 +545,9 @@ void chkManualLEDControlOverrideSwitch()
         digitalWrite(WHITE_RELAY, 1);
         delay(updateLEDs);
         analogWrite(WHITE_PWM_PIN, maxPWM - OverrideWhiteIntensity);
+        
       }
-      if (OverrideBlueIntensity < 10)
+      if (OverrideBlueIntensity < 25)
       {
         digitalWrite(BLUE_RELAY, 0);
         delay(updateLEDs);
@@ -561,7 +562,7 @@ void chkManualLEDControlOverrideSwitch()
 
 
 
-    analogWrite(WHITE_PWM_PIN, maxPWM - OverrideWhiteIntensity);
+    //analogWrite(WHITE_PWM_PIN, maxPWM - OverrideWhiteIntensity);
 #ifdef debuging
     Serial.println("Manual LED control override switch is on");
     Serial.println("Blue relay on");
