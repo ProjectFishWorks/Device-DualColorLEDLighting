@@ -10,13 +10,13 @@
 int I2C_SDA = 2;
 int I2C_SCL = 3;
 
-RTC_DS3231 rtc; // Create the RTC object
+//RTC_DS3231 rtc; // Create the RTC object
 
 // This line sets the RTC with an explicit date & time, for example to set
 // January 21, 2014 at 3am you would call:
 // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
 
-char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
+//char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"};
 
 #define NODE_ID 0xA1                                // 161
 #define WHITE_MESSAGE_ID 0x0A00                     // 2560
@@ -44,13 +44,13 @@ char daysOfTheWeek[7][12] = {"Sunday", "Monday", "Tuesday", "Wednesday", "Thursd
 #define WHITE_RELAY 2
 
 
-#define sendMessageLEDIntensityDelay 10000 // frequency of sending LED intensity messages to the App
-#define sendMessageDelay 1000                         // delay time in milliseconds
-#define MessageGap 5000                              // delay time in milliseconds
+#define sendMessageLEDIntensityDelay 2000   // frequency of sending LED intensity messages to the App
+#define updateLEDs 2000                     // delay time in milliseconds
+#define MessageGap 1000                     // delay time in milliseconds
 
 //  Max LED Intensities
-float MAX_WHITE_PWM = 255.0; // 255 is max
-float MAX_BLUE_PWM = 255.0;  //      ""
+float MAX_WHITE_PWM = 255.0;                // 255 is max
+float MAX_BLUE_PWM = 255.0;                 //      ""
 
 //  loop light durations
 int maxPWM = 255;
@@ -95,12 +95,13 @@ void setup()
   // Initialize the OneWire communication
   Wire.begin(I2C_SDA, I2C_SCL);
   
-  //I2C DS3231 addresses 0x57 of 0x68
+  /*I2C DS3231 addresses 0x57 of 0x68
   if (!rtc.begin(&Wire))
   {
     Serial.println("Couldn't find RTC");
     Serial.flush();
   }
+  */
 
   pinMode(WHITE_PWM_PIN, OUTPUT);
   pinMode(BLUE_PWM_PIN, OUTPUT);
@@ -128,7 +129,7 @@ void setup()
 
   // When time needs to be re-set on a previously configured device, the
   // following line sets the RTC to the date & time this sketch was compiled
-  rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
+  //rtc.adjust(DateTime(F(__DATE__), F(__TIME__)));
   // This line sets the RTC with an explicit date & time, for example to set
   // January 21, 2014 at 3am you would call:
   // rtc.adjust(DateTime(2014, 1, 21, 3, 0, 0));
@@ -150,7 +151,7 @@ void loop()
   DemoLoop();
 
   
-    DateTime now = rtc.now();
+    /*DateTime now = rtc.now();
 
     Serial.print(now.year(), DEC);
     Serial.print(' ');
@@ -167,7 +168,7 @@ void loop()
     Serial.print(now.second(), DEC);
 
 
-    /*Serial.print(" since midnight 1/1/1970 = ");
+    Serial.print(" since midnight 1/1/1970 = ");
     Serial.print(now.unixtime());
     Serial.print("s = ");
     Serial.print(now.unixtime() / 86400L);
@@ -196,7 +197,7 @@ void loop()
 
     Serial.println();
     */
-    delay(1000);
+    delay(MessageGap);
     
 }
 
@@ -221,7 +222,7 @@ void DemoLoop()
   while (startTime + dawnBlueOnlyDuration > currentTime)    //  while millis is between the start time and the dawnBlueonlyDuration do the following
   {
     chkManualLEDControlOverrideSwitch();                    //  check if the manual override switch is on
-    delay(sendMessageDelay);
+    delay(updateLEDs);
     currentTime = millis();                                 //  get the current time in milliseconds               
     blueOnlyMaxIntensity = (int)blueOnlyMaxIntensityFloat;  //  cast the float to an int
     currentBlueIntensity = map(currentTime, startTime, startTime + dawnBlueOnlyDuration, 0, blueOnlyMaxIntensity);    //  map the current time to the start time and the duration of the dawnBlueOnlyDuration
@@ -230,7 +231,7 @@ void DemoLoop()
     if (currentBlueIntensity < 5)
     {
       digitalWrite(BLUE_RELAY, 0);                            //  turn off the blue relay
-      delay(sendMessageDelay);
+      delay(updateLEDs);
     }
     else
     {
@@ -257,7 +258,7 @@ void DemoLoop()
   while (startTime + sunriseFadeDuration > currentTime)
   {
     chkManualLEDControlOverrideSwitch();
-    delay(sendMessageDelay);
+    delay(updateLEDs);
     currentTime = millis();
     //                     map( inputValue, low range input, high range input, low range output, high range output);
     currentBlueIntensity = map(currentTime, startTime, startTime + sunriseFadeDuration, blueOnlyMaxIntensity, MAX_BLUE_PWM);
@@ -268,7 +269,7 @@ void DemoLoop()
     if (currentWhiteIntensity < 5)
     {
       digitalWrite(WHITE_RELAY, 0);
-      delay(sendMessageDelay);
+      delay(updateLEDs);
     }
     else
     {
@@ -299,7 +300,7 @@ void DemoLoop()
   while (startTime + highNoonDuration > currentTime)
   {
     chkManualLEDControlOverrideSwitch();
-    delay(sendMessageDelay);
+    delay(updateLEDs);
     currentTime = millis();
     analogWrite(BLUE_PWM_PIN, maxPWM - MAX_BLUE_PWM);
     analogWrite(WHITE_PWM_PIN, maxPWM - MAX_WHITE_PWM);
@@ -326,7 +327,7 @@ void DemoLoop()
   while (startTime + sunsetFadeDuration > currentTime)
   {
     chkManualLEDControlOverrideSwitch();
-    delay(sendMessageDelay);
+    delay(updateLEDs);
     currentTime = millis();
     //                         map( inputValue, low range input, high range input, low range output, high range output);
     currentBlueIntensity = map(currentTime, startTime, startTime + sunsetFadeDuration, MAX_BLUE_PWM, blueOnlyMaxIntensity);
@@ -337,7 +338,7 @@ void DemoLoop()
     if (currentWhiteIntensity < 5)
     {
       digitalWrite(WHITE_RELAY, 0);
-      delay(sendMessageDelay);
+      delay(updateLEDs);
     }
     else
     {
@@ -366,7 +367,7 @@ void DemoLoop()
   while (startTime + dawnBlueOnlyDuration > currentTime)
   {
     chkManualLEDControlOverrideSwitch();
-    delay(sendMessageDelay);
+    delay(updateLEDs);
     currentTime = millis();
     currentBlueIntensity = map(currentTime, startTime, startTime + dawnBlueOnlyDuration, (int)blueOnlyMaxIntensity, 0);
     analogWrite(BLUE_PWM_PIN, maxPWM - currentBlueIntensity);
@@ -374,7 +375,7 @@ void DemoLoop()
     if (currentBlueIntensity < 25)
     {
       digitalWrite(BLUE_RELAY, 0);
-      delay(sendMessageDelay);
+      delay(updateLEDs);
       analogWrite(BLUE_PWM_PIN, maxPWM - currentBlueIntensity);
     }
     else
@@ -399,7 +400,7 @@ void DemoLoop()
   while (startTime + nightTime > currentTime)
   {
     chkManualLEDControlOverrideSwitch();
-    delay(sendMessageDelay);
+    delay(updateLEDs);
     currentTime = millis();
     analogWrite(BLUE_PWM_PIN, off);
     analogWrite(WHITE_PWM_PIN, off);
@@ -536,23 +537,25 @@ void chkManualLEDControlOverrideSwitch()
       if (OverrideWhiteIntensity < 10)
       {
         digitalWrite(WHITE_RELAY, 0);
-        delay(sendMessageDelay);
+        delay(updateLEDs);
         analogWrite(WHITE_PWM_PIN, off);
       }
       else
       {
         digitalWrite(WHITE_RELAY, 1);
+        delay(updateLEDs);
         analogWrite(WHITE_PWM_PIN, maxPWM - OverrideWhiteIntensity);
       }
       if (OverrideBlueIntensity < 10)
       {
         digitalWrite(BLUE_RELAY, 0);
-        delay(sendMessageDelay);
+        delay(updateLEDs);
         analogWrite(BLUE_PWM_PIN, off);
       }
       else
       {
         digitalWrite(BLUE_RELAY, 1);
+        delay(updateLEDs);
         analogWrite(BLUE_PWM_PIN, maxPWM - OverrideBlueIntensity);
       }
 
