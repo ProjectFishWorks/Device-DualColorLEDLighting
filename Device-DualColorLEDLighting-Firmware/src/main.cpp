@@ -44,7 +44,7 @@ int I2C_SCL = 3;
 #define WHITE_RELAY 2
 
 
-#define sendMessageLEDIntensityDelay 500  // frequency of sending LED intensity messages to the App
+#define sendMessageLEDIntensityDelay 4000  // frequency of sending LED intensity messages to the App
 #define updateLEDs 100                         // delay time in milliseconds
 #define MessageGap 1000                              // delay time in milliseconds
 
@@ -205,7 +205,7 @@ void loop()
 
 void DemoLoop()
 {
-  //-------------------------------------------------------- sunrise -------------------------------------------------------------------
+  //-------------------------------------------------- "Dawn" -------------------------------------------------------------------
 
   analogWrite(BLUE_PWM_PIN, off);   // turn off the blue LED
   analogWrite(WHITE_PWM_PIN, off);  // turn off the white LED
@@ -218,12 +218,14 @@ void DemoLoop()
   unsigned long currentTime = millis();
   unsigned long startTime = millis();
 
-  //  Fade blueOnly up
+  //  Fade blueOnly up "Dawn"
+
+  //  map( inputValue, low range input, high range input, low range output, high range output);
   while (startTime + dawnBlueOnlyDuration > currentTime)    //  while millis is between the start time and the dawnBlueonlyDuration do the following
   {
     chkManualLEDControlOverrideSwitch();                    //  check if the manual override switch is on
     delay(updateLEDs);
-    currentTime = millis();                                 //  get the current time in milliseconds               
+    currentTime = millis();                                 //  get the current time in milliseconds  
     blueOnlyMaxIntensity = (int)blueOnlyMaxIntensityFloat;  //  cast the float to an int
     currentBlueIntensity = map(currentTime, startTime, startTime + dawnBlueOnlyDuration, 0, blueOnlyMaxIntensity);    //  map the current time to the start time and the duration of the dawnBlueOnlyDuration
     analogWrite(BLUE_PWM_PIN, maxPWM - currentBlueIntensity);   //  write the PWM value to the blue LED in reverse as off is max
@@ -252,7 +254,7 @@ void DemoLoop()
 #endif
   }
 
-  //--------------------------------------------------------- Fade blue and white to highNoon --------------------------------------------------
+  //----------------------------------- "Sunrise" Fade blue and white to highNoon  --------------------------------------------------
 
   startTime = millis();
   while (startTime + sunriseFadeDuration > currentTime)
@@ -294,7 +296,7 @@ void DemoLoop()
 #endif
   }
 
-  //---------------------------------------------------------------- highNoon ---------------------------------------------------------------
+  //----------------------------------------------------- "HighNoon" ---------------------------------------------------------------
 
   startTime = millis();
   while (startTime + highNoonDuration > currentTime)
@@ -321,15 +323,15 @@ void DemoLoop()
 #endif
   }
 
-  //----------------------------------------------------------- Fade blue and white to sunset --------------------------------------------------
+  //------------------------------------------------"Sunset" Fade blue and white to  --------------------------------------------------
 
   startTime = millis();
   while (startTime + sunsetFadeDuration > currentTime)
   {
     chkManualLEDControlOverrideSwitch();
-    delay(updateLEDs);
-    currentTime = millis();
-    //                         map( inputValue, low range input, high range input, low range output, high range output);
+    delay(updateLEDs);  
+    currentTime = millis();      
+    blueOnlyMaxIntensity = (int)blueOnlyMaxIntensityFloat;  //  cast the float to an int
     currentBlueIntensity = map(currentTime, startTime, startTime + sunsetFadeDuration, MAX_BLUE_PWM, blueOnlyMaxIntensity);
     analogWrite(BLUE_PWM_PIN, maxPWM - currentBlueIntensity);
     currentWhiteIntensity = map(currentTime, startTime, startTime + sunsetFadeDuration, MAX_WHITE_PWM, 0);
@@ -368,7 +370,8 @@ void DemoLoop()
   {
     chkManualLEDControlOverrideSwitch();
     delay(updateLEDs);
-    currentTime = millis();
+    currentTime = millis();         
+    blueOnlyMaxIntensity = (int)blueOnlyMaxIntensityFloat;  //  cast the float to an int
     currentBlueIntensity = map(currentTime, startTime, startTime + dawnBlueOnlyDuration, (int)blueOnlyMaxIntensity, 0);
     analogWrite(BLUE_PWM_PIN, maxPWM - currentBlueIntensity);
 
