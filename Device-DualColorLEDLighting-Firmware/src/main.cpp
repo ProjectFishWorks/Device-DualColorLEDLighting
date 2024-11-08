@@ -44,7 +44,7 @@ int I2C_SCL = 3;
 #define WHITE_RELAY 2
 
 
-#define sendMessageLEDIntensityDelay 2000 // frequency of sending LED intensity messages to the App
+#define sendMessageLEDIntensityDelay 500  // frequency of sending LED intensity messages to the App
 #define updateLEDs 100                         // delay time in milliseconds
 #define MessageGap 1000                              // delay time in milliseconds
 
@@ -511,9 +511,9 @@ void SendLEDIntensities(void *parameters)
     uint64_t BlueIntensity;
     WhiteIntensity = currentWhiteIntensity;
     BlueIntensity = currentBlueIntensity;
-    core.sendMessage(CURRENT_WHITE_MESSAGE_ID, &WhiteIntensity); // Send the white LED intensity
+    core.sendMessage(CURRENT_WHITE_MESSAGE_ID, &WhiteIntensity, false); // Send the white LED intensity
     delay(sendMessageLEDIntensityDelay);
-    core.sendMessage(CURRENT_BLUE_MESSAGE_ID, &BlueIntensity);
+    core.sendMessage(CURRENT_BLUE_MESSAGE_ID, &BlueIntensity, false);
     delay(sendMessageLEDIntensityDelay);
     }
     else
@@ -522,9 +522,9 @@ void SendLEDIntensities(void *parameters)
       uint64_t BlueIntensity;
       WhiteIntensity = OverrideWhiteIntensity;
       BlueIntensity = OverrideBlueIntensity;
-      core.sendMessage(CURRENT_WHITE_MESSAGE_ID, &WhiteIntensity); // Send the white LED intensity
+      core.sendMessage(CURRENT_WHITE_MESSAGE_ID, &WhiteIntensity, false); // Send the white LED intensity
       delay(sendMessageLEDIntensityDelay);
-      core.sendMessage(CURRENT_BLUE_MESSAGE_ID, &BlueIntensity);
+      core.sendMessage(CURRENT_BLUE_MESSAGE_ID, &BlueIntensity, false);
       delay(sendMessageLEDIntensityDelay);
     }
   }
