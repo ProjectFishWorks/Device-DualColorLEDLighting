@@ -8,6 +8,8 @@ The provide the required 10V PWM signal to the LED drivers, first a zener diode 
 
 ![alt text](Pictures/IMG_3170.jpg)
 
+![alt text](Pictures/IMG_3172.jpg)
+
 ![alt text](<Pictures/Screenshot 2024-12-08 at 2.05.08 PM.png>)
 
 ## Firmware
