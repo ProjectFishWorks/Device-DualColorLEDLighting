@@ -14,7 +14,7 @@
 
 //  DAC object
 Adafruit_MCP4728 MCP12bitDAC; //  create the MCP4728 object 12 bits of resolution = 4096 steps, so MAX_DAC = 4095
-int MAX_DAC = 4096;           //  this can be changed if there is a different resolution than 12bit
+int MAX_DAC = 4095;           //  this can be changed if there is a different resolution than 12bit
 int DAC_OFF = MAX_DAC;        //  change this to 0 if the DAC is not inverted
 
 // USE int FOR I2C PIN DEFINITIONS
@@ -78,7 +78,7 @@ int overrideBlue_1_Intensity;                      // variable to store the over
 int overrideBlue_2_Intensity;                      // variable to store the override blue_2 intensity message data
 #define MIN_WHITE_VALUE_MESSAGE_ID 2585            // 0xA19
 int minWhiteValue;                                 // variable to store the min white value message data
-#define MIN_BLUE_VALUE_MESSAGE_ID 2556             // 0xA1A
+#define MIN_BLUE_VALUE_MESSAGE_ID 2586             // 0xA1A
 int minBlueValue;                                  // variable to store the min blue value message data
 
 // colored and numbered names for the DAC channels to take values from 0-4095
@@ -91,26 +91,31 @@ int minBlueValue;                                  // variable to store the min 
 #define BLUE_RELAY 3
 #define WHITE_RELAY 2
 
-#define sendMqttMessageUpdateUI 1000 // frequency of sending LED intensity messages to the App
+#define sendMqttMessageUpdateUI 5000 // frequency of sending LED intensity messages to the App
 #define updateLEDs 100               // delay time in milliseconds
 #define MessageGap 1000              // delay time in milliseconds
 
-// Time keeping
-struct tm timeinfo;                                                                // Time struct
-int curTimeSec = timeinfo.tm_hour * 3600 + timeinfo.tm_min * 60 + timeinfo.tm_sec; //  get the start time in seconds since midnight
-int dawnStart;                                                                     //  start time of dawn in seconds since midnight
-int duskStart;                                                                     //  start time of dusk in seconds since midnight
-int sunriseStart;                                                                  //  start time of sunrise in seconds since midnight
-int sunsetStart;                                                                   //  start time of sunset in seconds since midnight
-int highNoonStart;                                                                 //  start time of high noon in seconds since midnight
-int nightTimeStart;                                                                //  start time of night time in seconds since midnight
-int dawnDurationSec;                                                               //  duration of dawn in seconds
-int sunriseDurationSec;                                                            //  duration of sunrise in seconds
-int highNoonDurationSec;                                                           //  duration of high noon in seconds
-int sunsetDurationSec;                                                             //  duration of sunset in seconds
-int duskDurationSec;                                                               //  duration of dusk in seconds
-int nightTimeDurationSec;                                                          //  duration of night time in seconds
-int MIDNIGHT = 86400;                                                              //  24 hours in seconds
+// Globals for time keeping
+char localTime[64];          // Local time string
+String localTimeZone;        // "UTC+" + localTimeZoneOffset
+int localTimeZoneOffset = 8; // Timezone offset
+char buf_localTimeZone[8];   // Char array Buffer for timezone string
+struct tm timeinfo;          // Time structure
+time_t UNIXtime;             // UNIX time
+int curTimeSec;              //  get the start time in seconds since midnight
+int dawnStart;               //  start time of dawn in seconds since midnight
+int duskStart;               //  start time of dusk in seconds since midnight
+int sunriseStart;            //  start time of sunrise in seconds since midnight
+int sunsetStart;             //  start time of sunset in seconds since midnight
+int highNoonStart;           //  start time of high noon in seconds since midnight
+int nightTimeStart;          //  start time of night time in seconds since midnight
+int dawnDurationSec;         //  duration of dawn in seconds
+int sunriseDurationSec;      //  duration of sunrise in seconds
+int highNoonDurationSec;     //  duration of high noon in seconds
+int sunsetDurationSec;       //  duration of sunset in seconds
+int duskDurationSec;         //  duration of dusk in seconds
+int nightTimeDurationSec;    //  duration of night time in seconds
+int MIDNIGHT = 86400;        //  24 hours in seconds
 
 //  floats for the max intensities and min values from (data / 100) * MAX_DAC
 float whiteMinValue_float;
@@ -150,29 +155,35 @@ void setup()
 {
   // Initialize serial communication
   Serial.begin(115200);
+  Serial.println("Initializing Serial Communication");
+  Serial.println("");
 
   // Initialize the OneWire communication
   Wire.begin(I2C_SDA, I2C_SCL);
+  Serial.println("Initializing I2C Communication");
+  Serial.println("");
 
   //  Initialize the DAC
+  MCP12bitDAC.begin();
   while (!MCP12bitDAC.begin())
-
-    delay(10); // will pause Zero, Leonardo, etc until serial console opens
-
-  Serial.println("Adafruit MCP4728 test!");
-
-  // Try to initialize!
-  if (!MCP12bitDAC.begin())
   {
-    Serial.println("Failed to find MCP4728 chip");
-    Serial.println("");
-    while (1)
+    delay(100); // will pause Zero, Leonardo, etc until serial console opens
+    Serial.println("Adafruit MCP4728 initializing...");
+
+    // Try to initialize!
+    if (!MCP12bitDAC.begin())
     {
-      delay(10);
+      Serial.println("Failed to find MCP4728 chip");
+      Serial.println("");
+      while (1)
+      {
+        MCP12bitDAC.begin();
+        delay(10);
+      }
     }
+    Serial.println("MCP4728 Found!");
+    Serial.println("");
   }
-  Serial.println("MCP4728 Found!");
-  Serial.println("");
   /*
    * @param channel The channel to update
    * @param new_value The new value to assign
@@ -215,8 +226,8 @@ void setup()
   // Setup RELAY pins
   pinMode(BLUE_RELAY, OUTPUT);
   pinMode(WHITE_RELAY, OUTPUT);
-  digitalWrite(WHITE_RELAY, 0); // turn on the relay
-  digitalWrite(BLUE_RELAY, 0);  // turn on the relay
+  digitalWrite(WHITE_RELAY, RELAY_ON); // turn on the relay
+  digitalWrite(BLUE_RELAY, RELAY_ON);  // turn on the relay
 
   // Create the node controller core object
   core = NodeControllerCore();
@@ -265,7 +276,6 @@ void LightCycles(void *parameters)
   while (1)
   {
     delay(MessageGap);
-
     updateTimes();
 
     // Set the LEDs to off in no Light cycles are valid times
@@ -289,7 +299,6 @@ void LightCycles(void *parameters)
       delay(updateLEDs);
       chkmanualOverrideSwitch();                                                                                 //  check if the manual override switch is on
       updateTimes();                                                                                             //  check if the manual override switch is on
-      delay(updateLEDs);                                                                                         //  get the current time in milliseconds
       blue_1_MaxIntensity = (int)blue_1_MaxIntensity_float;                                                      //  cast the float to an int
       blue_2_MaxIntensity = (int)blue_2_MaxIntensity_float;                                                      //  cast the float to an int
       currentBlue_1_Intensity = map(curTimeSec, dawnStart, dawnStart + dawnDurationSec, 0, blue_1_MaxIntensity); //  map the current time to the start time and the duration of the dawnDurationSec
@@ -307,6 +316,7 @@ void LightCycles(void *parameters)
       }
 
 #ifdef debuging
+      Serial.println("UNIXtime = " + String(UNIXtime));
       Serial.print("curTimeSec = " + String(curTimeSec));
       Serial.print("dawnDurationSec = " + String(dawnDurationSec));
       Serial.print("dawnStart = " + String(dawnStart));
@@ -349,6 +359,7 @@ void LightCycles(void *parameters)
       }
 
 #ifdef debuging
+      Serial.println("UNIXtime = " + String(UNIXtime));
       Serial.print("curTimeSec = " + String(curTimeSec));
       Serial.print("sunriseDurationSec = " + String(sunriseDurationSec));
       Serial.print("sunriseStart = " + String(sunriseStart));
@@ -382,6 +393,7 @@ void LightCycles(void *parameters)
       MCP12bitDAC.setChannelValue(WHITE_2_DAC, MAX_DAC - currentWhite_2_Intensity);
 
 #ifdef debuging
+      Serial.println("UNIXtime = " + String(UNIXtime));
       Serial.print("curTimeSec = " + String(curTimeSec));
       Serial.print("highNoonDurationSec = " + String(highNoonDurationSec));
       Serial.print("highNoonStart = " + String(highNoonStart));
@@ -425,6 +437,7 @@ void LightCycles(void *parameters)
       }
 
 #ifdef debuging
+      Serial.println("UNIXtime = " + String(UNIXtime));
       Serial.print("curTimeSec = " + String(curTimeSec));
       Serial.print("sunsetDurationSec = " + String(sunsetDurationSec));
       Serial.print("sunsetStart = " + String(sunsetStart));
@@ -463,6 +476,7 @@ void LightCycles(void *parameters)
     }
 
 #ifdef debuging
+    Serial.println("UNIXtime = " + String(UNIXtime));
     Serial.print("curTimeSec = " + String(curTimeSec));
     Serial.print("duskDurationSec = " + String(duskDurationSec));
     Serial.print("duskStart = " + String(duskStart));
@@ -493,6 +507,7 @@ void LightCycles(void *parameters)
     {
 
 #ifdef debuging
+      Serial.println("UNIXtime = " + String(UNIXtime));
       Serial.print("curTimeSec = " + String(curTimeSec));
       Serial.print("nightTimeDurationSec = " + String(nightTimeDurationSec));
       Serial.print("nightTimeStart = " + String(nightTimeStart));
@@ -504,6 +519,7 @@ void LightCycles(void *parameters)
       Serial.println(digitalRead(BLUE_RELAY));
       Serial.print("White relay = ");
       Serial.println(digitalRead(WHITE_RELAY));
+      Serial.println("");
 #endif
     }
   }
@@ -527,58 +543,79 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
       // ---------------------Min max and override values control messages-------------------------
 
     case MIN_WHITE_VALUE_MESSAGE_ID:
-      minWhiteValue = (data / 100) * MAX_DAC;
-      Serial.println("Min White Value set to " + String(data));
+      minWhiteValue = (int)(data / 100) * MAX_DAC;
+      Serial.println("Min White Value data =  " + String(data));
+      Serial.println("Min White Value set to " + String(minWhiteValue));
+      Serial.println("");
       break;
 
     case MIN_BLUE_VALUE_MESSAGE_ID:
-      minBlueValue = (data / 100) * MAX_DAC;
-      Serial.println("Min Blue Value set to " + String(data));
+      minBlueValue = (int)(data / 100) * MAX_DAC;
+      Serial.println("Min Blue Value data =  " + String(data));
+      Serial.println("Min Blue Value set to " + String(minBlueValue));
+      Serial.println("");
       break;
 
     case BLUE_1_MAX_INTENSITY_MESSAGE_ID:
       blue_1_MaxIntensity_float = (data / 100) * MAX_DAC;
       Serial.println("Blue 1 Max Intensity set to " + String(data));
+      Serial.println("Blue 1 Max Intensity set to " + String(blue_1_MaxIntensity_float));
+      Serial.println("");
       break;
 
     case BLUE_2_MAX_INTENSITY_MESSAGE_ID:
       blue_2_MaxIntensity_float = (data / 100) * MAX_DAC;
       Serial.println("Blue 2 Max Intensity set to " + String(data));
+      Serial.println("Blue 2 Max Intensity set to " + String(blue_2_MaxIntensity_float));
+      Serial.println("");
       break;
 
     case WHITE_1_MAX_INTENSITY_MESSAGE_ID:
       white_1_MaxIntensity_float = (data / 100) * MAX_DAC;
       Serial.println("White 1 Max Intensity set to " + String(data));
+      Serial.println("White 1 Max Intensity set to " + String(white_1_MaxIntensity_float));
+      Serial.println("");
       break;
 
     case WHITE_2_MAX_INTENSITY_MESSAGE_ID:
       white_2_MaxIntensity_float = (data / 100) * MAX_DAC;
       Serial.println("White 2 Max Intensity set to " + String(data));
+      Serial.println("White 2 Max Intensity set to " + String(white_2_MaxIntensity_float));
+      Serial.println("");
       break;
 
     case MANUAL_OVERRIDE_SWITCH_MESSAGE_ID:
-      manualOverrideSwitch = (data / 100) * MAX_DAC;
-      Serial.println("Manual LED Control Override Switch set to " + String(data));
+      manualOverrideSwitch = data;
+      Serial.println("Manual Override Switch set to " + String(data));
+      Serial.println("");
       break;
 
     case OVERRIDE_WHITE_1_INTENSITY_MESSAGE_ID:
-      overrideWhite_1_Intensity = (data / 100) * MAX_DAC;
+      overrideWhite_1_Intensity = (int)(data / 100) * MAX_DAC;
       Serial.println("Override White 1 Intensity set to " + String(data));
+      Serial.println("Override White 1 Intensity set to " + String(overrideWhite_1_Intensity));
+      Serial.println("");
       break;
 
     case OVERRIDE_WHITE_2_INTENSITY_MESSAGE_ID:
-      overrideWhite_2_Intensity = (data / 100) * MAX_DAC;
+      overrideWhite_2_Intensity = (int)(data / 100) * MAX_DAC;
       Serial.println("Override White 2 Intensity set to " + String(data));
+      Serial.println("Override White 2 Intensity set to " + String(overrideWhite_2_Intensity));
+      Serial.println("");
       break;
 
     case OVERRIDE_BLUE_1_INTENSITY_MESSAGE_ID:
-      overrideBlue_1_Intensity = (data / 100) * MAX_DAC;
+      overrideBlue_1_Intensity = (int)(data / 100) * MAX_DAC;
       Serial.println("Override Blue 1 Intensity set to " + String(data));
+      Serial.println("Override Blue 1 Intensity set to " + String(overrideBlue_1_Intensity));
+      Serial.println("");
       break;
 
     case OVERRIDE_BLUE_2_INTENSITY_MESSAGE_ID:
-      overrideBlue_2_Intensity = (data / 100) * MAX_DAC;
+      overrideBlue_2_Intensity = (int)(data / 100) * MAX_DAC;
       Serial.println("Override Blue 2 Intensity set to " + String(data));
+      Serial.println("Override Blue 2 Intensity set to " + String(overrideBlue_2_Intensity));
+      Serial.println("");
       break;
 
       //  ----------------- lightcycle times in hours and mins messages--------------------------------
@@ -642,35 +679,38 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
 
   if (nodeID == BASESTATION_ID)
   {
+    delay(MessageGap);
     Serial.println("Message received from Base Station");
     Serial.println("");
+    getLocalTime(&timeinfo); // Get the current time from the ESP32 RTC
+
+    /*                                           Globals for time keeping
+    char localTime[64];                                                                // Local time string
+    String localTimeZone;                                                              // "UTC+" + localTimeZoneOffset
+    int localTimeZoneOffset = 8;                                                       // Timezone offset
+    char buf_localTimeZone[8];                                                         // Char array Buffer for timezone string
+    struct tm timeinfo;
     time_t UNIXtime;
-    UNIXtime = time(NULL);       // Get the current UNIXtime
-    getLocalTime(&timeinfo);     // Get the current time from the ESP32 RTC
-    char localTime[64];          // Local time string
-    String localTimeZone;        // "UTC+" + localTimeZoneOffset
-    int localTimeZoneOffset = 8; // Timezone offset
-    char buf_localTimeZone[8];   // Char array Buffer for timezone string
+    */
 
     if (messageID == UNIX_TIME_MESSAGE_ID)
     // Time keeping
     {
-      UNIXtime = data;                   // Get the UNIX time from the message
+      UNIXtime = data; // Get the UNIX time from the message
+      localTimeZone = "UTC+" + String(localTimeZoneOffset);
+      localTimeZone.toCharArray(buf_localTimeZone, 8);
+      setenv("TZ", buf_localTimeZone, 1);
+      tzset();
       localtime_r(&UNIXtime, &timeinfo); // Get the local time
       strftime(localTime, sizeof(localTime), "%c", &timeinfo);
       getLocalTime(&timeinfo); // Get the current time from the ESP32 RTC
-      localTimeZone = "UTC+" + String(localTimeZoneOffset);
-      localTimeZone.toCharArray(buf_localTimeZone, 6);
-      setenv("TZ", buf_localTimeZone, 1);
-      tzset();
 
 #ifdef debugingTime
       Serial.println("Message ID is for UNIX time keeping");
       Serial.println("The local time zone is = " + String(localTimeZone));
       Serial.println("UNIXtime = " + String(UNIXtime));
       Serial.println("data = " + String(data));
-      Serial.print("The current RTC date/time is: localTime = ");
-      Serial.println(localTime);
+      Serial.println("The current RTC date/time is: localTime = " + String(localTime));
       Serial.println("buf_localTimeZone = " + String(buf_localTimeZone));
       Serial.println("Time Zone Offset = " + String(localTimeZoneOffset));
       Serial.println("Local Time Zone = " + String(localTimeZone));
@@ -678,13 +718,22 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
       Serial.println("");
 #endif
     }
+
     if (messageID == UPDATE_TIMEZONE_OFFSET_MESSAGE_ID)
     {
-      localTimeZoneOffset = data;
+      localTimeZoneOffset = (int)data;
+      localTimeZone = "UTC+" + String(localTimeZoneOffset);
+      localTimeZone.toCharArray(buf_localTimeZone, 8);
+      setenv("TZ", buf_localTimeZone, 1);
+      tzset();
+      localtime_r(&UNIXtime, &timeinfo); // Get the local time
+      strftime(localTime, sizeof(localTime), "%c", &timeinfo);
+      getLocalTime(&timeinfo); // Get the current time from the ESP32 RTC
 
 #ifdef debugingTime
       Serial.println("Message ID is for updating the time zone offset");
-      Serial.println("data = " + String(localTimeZoneOffset));
+      Serial.println("The local time zone is = " + String(localTimeZoneOffset));
+      Serial.println("data = " + String(data));
       Serial.println("");
 #endif
     }
@@ -708,10 +757,14 @@ void SendLEDIntensities(void *parameters)
       uint64_t White_2_Intensity;
       uint64_t Blue_1_Intensity;
       uint64_t Blue_2_Intensity;
-      White_1_Intensity = currentWhite_1_Intensity;
-      White_2_Intensity = currentWhite_2_Intensity;
-      Blue_1_Intensity = currentBlue_1_Intensity;
-      Blue_2_Intensity = currentBlue_2_Intensity;
+      float White_1_Intensity_float = (currentWhite_1_Intensity / MAX_DAC) * 100;
+      float White_2_Intensity_float = (currentWhite_2_Intensity / MAX_DAC) * 100;
+      float Blue_1_Intensity_float = (currentBlue_1_Intensity / MAX_DAC) * 100;
+      float Blue_2_Intensity_float = (currentBlue_2_Intensity / MAX_DAC) * 100;
+      White_1_Intensity = (uint64_t)White_1_Intensity_float;
+      White_2_Intensity = (uint64_t)White_2_Intensity_float;
+      Blue_1_Intensity = (uint64_t)Blue_1_Intensity_float;
+      Blue_2_Intensity = (uint64_t)Blue_2_Intensity_float;
       core.sendMessage(CURRENT_WHITE_1_MESSAGE_ID, &White_1_Intensity, false); // Send the white LED intensity on the Canbus
       delay(updateLEDs);
       core.sendMessage(CURRENT_WHITE_2_MESSAGE_ID, &White_2_Intensity, false); // Send the white LED intensity on the Canbus
@@ -723,6 +776,10 @@ void SendLEDIntensities(void *parameters)
     }
     else
     {
+      uint16_t CurrentWhite_1_MessageID = CURRENT_WHITE_1_MESSAGE_ID;
+      uint16_t CurrentWhite_2_MessageID = CURRENT_WHITE_2_MESSAGE_ID;
+      uint16_t CurrentBlue_1_MessageID = CURRENT_BLUE_1_MESSAGE_ID;
+      uint16_t CurrentBlue_2_MessageID = CURRENT_BLUE_2_MESSAGE_ID;
       uint64_t White_1_Intensity;
       uint64_t White_2_Intensity;
       uint64_t Blue_1_Intensity;
@@ -731,13 +788,13 @@ void SendLEDIntensities(void *parameters)
       White_2_Intensity = overrideWhite_2_Intensity;
       Blue_1_Intensity = overrideBlue_1_Intensity;
       Blue_2_Intensity = overrideBlue_2_Intensity;
-      core.sendMessage(CURRENT_WHITE_1_MESSAGE_ID, &White_1_Intensity, false); // Send the white LED intensity on the Canbus
+      core.sendMessage(CurrentWhite_1_MessageID, &White_1_Intensity, false); // Send the white LED intensity on the Canbus
       delay(updateLEDs);
-      core.sendMessage(CURRENT_WHITE_2_MESSAGE_ID, &White_2_Intensity, false); // Send the white LED intensity on the Canbus
+      core.sendMessage(CurrentWhite_2_MessageID, &White_2_Intensity, false); // Send the white LED intensity on the Canbus
       delay(updateLEDs);
-      core.sendMessage(CURRENT_BLUE_1_MESSAGE_ID, &Blue_1_Intensity, false); // Send the blue LED intensity on the Canbus
+      core.sendMessage(CurrentBlue_1_MessageID, &Blue_1_Intensity, false); // Send the blue LED intensity on the Canbus
       delay(updateLEDs);
-      core.sendMessage(CURRENT_BLUE_2_MESSAGE_ID, &Blue_2_Intensity, false); // Send the blue LED intensity on the Canbus
+      core.sendMessage(CurrentBlue_2_MessageID, &Blue_2_Intensity, false); // Send the blue LED intensity on the Canbus
       delay(sendMqttMessageUpdateUI);
     }
   }
@@ -824,14 +881,17 @@ void updateTimes()
     sunsetDurationSec = (((duskHours * 3600) + (duskMinutes * 60)) - ((sunsetHours * 3600) + (sunsetMinutes * 60)));            //  calculate the duration of the sunset cycle in seconds
     duskDurationSec = (((nightTimeHours * 3600) + (nightTimeMinutes * 60)) - ((duskHours * 3600) + (duskMinutes * 60)));        //  calculate the duration of the dusk cycle in seconds
     nightTimeDurationSec = ((MIDNIGHT + dawnStart) - ((nightTimeHours * 3600) + (nightTimeMinutes * 60)));                      //  calculate the duration of the nightTime cycle in seconds
-    dawnStart = (dawnHours * 3600) + (dawnMinutes * 60);                //  calculate the start time of dawn in seconds since midnight
-    sunriseStart = (sunriseHours * 3600) + (sunriseMinutes * 60);       //  calculate the start time of sunrise in seconds since midnight
-    highNoonStart = (highNoonHours * 3600) + (highNoonMinutes * 60);    //  calculate the start time of high noon in seconds since midnight
-    sunsetStart = (sunsetHours * 3600) + (sunsetMinutes * 60);          //  calculate the start time of sunset in seconds since midnight
-    duskStart = (duskHours * 3600) + (duskMinutes * 60);                //  calculate the start time of dusk in seconds since midnight
-    nightTimeStart = (nightTimeHours * 3600) + (nightTimeMinutes * 60); //  calculate the start time of night time in seconds since midnight
-    
+    dawnStart = (dawnHours * 3600) + (dawnMinutes * 60);                                                                        //  calculate the start time of dawn in seconds since midnight
+    sunriseStart = (sunriseHours * 3600) + (sunriseMinutes * 60);                                                               //  calculate the start time of sunrise in seconds since midnight
+    highNoonStart = (highNoonHours * 3600) + (highNoonMinutes * 60);                                                            //  calculate the start time of high noon in seconds since midnight
+    sunsetStart = (sunsetHours * 3600) + (sunsetMinutes * 60);                                                                  //  calculate the start time of sunset in seconds since midnight
+    duskStart = (duskHours * 3600) + (duskMinutes * 60);                                                                        //  calculate the start time of dusk in seconds since midnight
+    nightTimeStart = (nightTimeHours * 3600) + (nightTimeMinutes * 60);                                                         //  calculate the start time of night time in seconds since midnight
+
 #ifdef debuging
+    Serial.println("Running updateTimes function");
+    Serial.println("timeinfo = " + String());
+    Serial.println("UNIXtime = " + String(UNIXtime));
     Serial.println("24 hour time = " + String(timeinfo.tm_hour) + ":" + String(timeinfo.tm_min) + ":" + String(timeinfo.tm_sec));
     Serial.println("curTimeSec in seconds  = " + String(curTimeSec));
     Serial.println("dawnDurationSec = " + String(dawnDurationSec));
@@ -848,6 +908,5 @@ void updateTimes()
     Serial.println("nightTimeStart = " + String(nightTimeStart));
     Serial.println("");
 #endif
-
   }
 }
