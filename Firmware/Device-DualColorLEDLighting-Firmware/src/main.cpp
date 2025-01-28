@@ -696,6 +696,7 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
     if (messageID == UNIX_TIME_MESSAGE_ID)
     // Time keeping
     {
+      delay(MessageGap);
       UNIXtime = data; // Get the UNIX time from the message
       localTimeZone = "UTC+" + String(localTimeZoneOffset);
       localTimeZone.toCharArray(buf_localTimeZone, 8);
