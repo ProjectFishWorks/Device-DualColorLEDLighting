@@ -52,34 +52,48 @@ int nightTimeMinutes;                              // variable to store the nigh
 int nightTimeHours;                                // variable to store the night time hours message data
 #define BLUE_1_MAX_INTENSITY_MESSAGE_ID 2572       // 0xA0C
 int blue_1_MaxIntensity;                           // variable to store the blue_1 max intensity message data
+float blue_1_MaxIntensity_float;                   // variable to store the blue_1 max intensity message data
 #define BLUE_2_MAX_INTENSITY_MESSAGE_ID 2573       // 0xA0D
 int blue_2_MaxIntensity;                           // variable to store the blue_2 max intensity message data
+float blue_2_MaxIntensity_float;                   // variable to store the blue_2 max intensity message data
 #define WHITE_1_MAX_INTENSITY_MESSAGE_ID 2574      // 0xA0E
 int white_1_MaxIntensity;                          // variable to store the white_1 max intensity message data
+float white_1_MaxIntensity_float;                  // variable to store the white_1 max intensity message data
 #define WHITE_2_MAX_INTENSITY_MESSAGE_ID 2575      // 0xA0F
 int white_2_MaxIntensity;                          // variable to store the white_2 max intensity message data
+float white_2_MaxIntensity_float;                  // variable to store the white_2 max intensity message data
 #define CURRENT_WHITE_1_MESSAGE_ID 2576            // 0xA10
 int currentWhite_1_Intensity;                      // variable to store the current white_1 intensity message data
+float currentWhite_1_Intensity_float;              // variable to store the current white_1 intensity message data
 #define CURRENT_WHITE_2_MESSAGE_ID 2577            // 0xA11
 int currentWhite_2_Intensity;                      // variable to store the current white_2 intensity message data
+float currentWhite_2_Intensity_float;              // variable to store the current white_2 intensity message data
 #define CURRENT_BLUE_1_MESSAGE_ID 2578             // 0xA12
 int currentBlue_1_Intensity;                       // variable to store the current blue_1 intensity message data
+float currentBlue_1_Intensity_float;               // variable to store the current blue_1 intensity message data
 #define CURRENT_BLUE_2_MESSAGE_ID 2579             // 0xA13
 int currentBlue_2_Intensity;                       // variable to store the current blue_2 intensity message data
+float currentBlue_2_Intensity_float;               // variable to store the current blue_2 intensity message data
 #define MANUAL_OVERRIDE_SWITCH_MESSAGE_ID 2580     // 0xA14
 bool manualOverrideSwitch = false;                 // variable to store the manual override switch message data
 #define OVERRIDE_WHITE_1_INTENSITY_MESSAGE_ID 2581 // 0xA15
 int overrideWhite_1_Intensity;                     // variable to store the override white_1 intensity message data
+float overrideWhite_1_Intensity_float;             // variable to store the override white_1 intensity message data
 #define OVERRIDE_WHITE_2_INTENSITY_MESSAGE_ID 2582 // 0xA16
 int overrideWhite_2_Intensity;                     // variable to store the override white_2 intensity message data
+float overrideWhite_2_Intensity_float;             // variable to store the override white_2 intensity message data
 #define OVERRIDE_BLUE_1_INTENSITY_MESSAGE_ID 2583  // 0xA17
 int overrideBlue_1_Intensity;                      // variable to store the override blue_1 intensity message data
+float overrideBlue_1_Intensity_float;              // variable to store the override blue_1 intensity message data
 #define OVERRIDE_BLUE_2_INTENSITY_MESSAGE_ID 2584  // 0xA18
 int overrideBlue_2_Intensity;                      // variable to store the override blue_2 intensity message data
+float overrideBlue_2_Intensity_float;              // variable to store the override blue_2 intensity message data
 #define MIN_WHITE_VALUE_MESSAGE_ID 2585            // 0xA19
 int minWhiteValue;                                 // variable to store the min white value message data
+float minWhiteValue_float;                         // variable to store the min white value message data
 #define MIN_BLUE_VALUE_MESSAGE_ID 2586             // 0xA1A
 int minBlueValue;                                  // variable to store the min blue value message data
+float minBlueValue_float;                          // variable to store the min blue value message data
 
 // colored and numbered names for the DAC channels to take values from 0-4095
 #define WHITE_1_DAC MCP4728_CHANNEL_A
@@ -117,18 +131,6 @@ int duskDurationSec;         //  duration of dusk in seconds
 int nightTimeDurationSec;    //  duration of night time in seconds
 int MIDNIGHT = 86400;        //  24 hours in seconds
 
-//  floats for the max intensities and min values from (data / 100) * MAX_DAC
-float whiteMinValue_float;
-float blueMinValue_float;
-float white_1_MaxIntensity_float;
-float white_2_MaxIntensity_float;
-float blue_1_MaxIntensity_float;
-float blue_2_MaxIntensity_float;
-float overrideWhite_1_Intensity_float;
-float overrideWhite_2_Intensity_float;
-float overrideBlue_1_Intensity_float;
-float overrideBlue_2_Intensity_float;
-
 // Node controller core object
 NodeControllerCore core;
 
@@ -157,6 +159,10 @@ void setup()
   Serial.begin(115200);
   Serial.println("Initializing Serial Communication");
   Serial.println("");
+
+  // Initialize the time keeping
+  struct tm timeinfo;
+  getLocalTime(&timeinfo);
 
   // Initialize the OneWire communication
   Wire.begin(I2C_SDA, I2C_SCL);
@@ -299,8 +305,6 @@ void LightCycles(void *parameters)
       delay(updateLEDs);
       chkmanualOverrideSwitch();                                                                                 //  check if the manual override switch is on
       updateTimes();                                                                                             //  check if the manual override switch is on
-      blue_1_MaxIntensity = (int)blue_1_MaxIntensity_float;                                                      //  cast the float to an int
-      blue_2_MaxIntensity = (int)blue_2_MaxIntensity_float;                                                      //  cast the float to an int
       currentBlue_1_Intensity = map(curTimeSec, dawnStart, dawnStart + dawnDurationSec, 0, blue_1_MaxIntensity); //  map the current time to the start time and the duration of the dawnDurationSec
       currentBlue_2_Intensity = map(curTimeSec, dawnStart, dawnStart + dawnDurationSec, 0, blue_2_MaxIntensity); //  map the current time to the start time and the duration of the dawnDurationSec
       MCP12bitDAC.setChannelValue(BLUE_1_DAC, MAX_DAC - currentBlue_1_Intensity);                                //  set the BLUE_1_DAC to the mapped intensity
@@ -334,10 +338,6 @@ void LightCycles(void *parameters)
       chkmanualOverrideSwitch();
       updateTimes();
       delay(updateLEDs);
-      blue_1_MaxIntensity = (int)blue_1_MaxIntensity_float;   //  cast the float to an int
-      blue_2_MaxIntensity = (int)blue_2_MaxIntensity_float;   //  cast the float to an int
-      white_1_MaxIntensity = (int)white_1_MaxIntensity_float; //  cast the float to an int
-      white_2_MaxIntensity = (int)white_2_MaxIntensity_float; //  cast the float to an int
       //                     map( inputValue, low range input, high range input, low range output, high range output);
       currentBlue_1_Intensity = map(curTimeSec, sunriseStart, sunriseStart + sunriseDurationSec, minBlueValue, blue_1_MaxIntensity);
       currentBlue_2_Intensity = map(curTimeSec, sunriseStart, sunriseStart + sunriseDurationSec, minBlueValue, blue_2_MaxIntensity);
@@ -379,10 +379,6 @@ void LightCycles(void *parameters)
       chkmanualOverrideSwitch();
       updateTimes();
       delay(updateLEDs);
-      blue_1_MaxIntensity = (int)blue_1_MaxIntensity_float;   //  cast the float to an int
-      blue_2_MaxIntensity = (int)blue_2_MaxIntensity_float;   //  cast the float to an int
-      white_1_MaxIntensity = (int)white_1_MaxIntensity_float; //  cast the float to an int
-      white_2_MaxIntensity = (int)white_2_MaxIntensity_float; //  cast the float to an int
       currentBlue_1_Intensity = blue_1_MaxIntensity;
       currentBlue_2_Intensity = blue_2_MaxIntensity;
       currentWhite_1_Intensity = white_1_MaxIntensity;
@@ -413,10 +409,6 @@ void LightCycles(void *parameters)
       chkmanualOverrideSwitch();
       updateTimes();
       delay(updateLEDs);
-      blue_1_MaxIntensity = (int)blue_1_MaxIntensity_float;   //  cast the float to an int
-      blue_2_MaxIntensity = (int)blue_2_MaxIntensity_float;   //  cast the float to an int
-      white_1_MaxIntensity = (int)white_1_MaxIntensity_float; //  cast the float to an int
-      white_2_MaxIntensity = (int)white_2_MaxIntensity_float; //  cast the float to an int
       currentBlue_1_Intensity = map(curTimeSec, sunsetStart, sunsetStart + sunsetDurationSec, blue_1_MaxIntensity, minBlueValue);
       currentBlue_2_Intensity = map(curTimeSec, sunsetStart, sunsetStart + sunsetDurationSec, blue_2_MaxIntensity, minBlueValue);
       currentWhite_1_Intensity = map(curTimeSec, sunsetStart, sunsetStart + sunsetDurationSec, white_1_MaxIntensity, minWhiteValue);
@@ -457,8 +449,6 @@ void LightCycles(void *parameters)
       chkmanualOverrideSwitch();
       updateTimes();
       delay(updateLEDs);
-      blue_1_MaxIntensity = (int)blue_1_MaxIntensity_float; //  cast the float to an int
-      blue_2_MaxIntensity = (int)blue_2_MaxIntensity_float; //  cast the float to an int
       currentBlue_1_Intensity = map(curTimeSec, duskStart, duskStart + duskDurationSec, minBlueValue, blue_1_MaxIntensity);
       currentBlue_2_Intensity = map(curTimeSec, duskStart, duskStart + duskDurationSec, minBlueValue, blue_2_MaxIntensity);
       MCP12bitDAC.setChannelValue(BLUE_1_DAC, MAX_DAC - currentBlue_1_Intensity);
@@ -543,14 +533,16 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
       // ---------------------Min max and override values control messages-------------------------
 
     case MIN_WHITE_VALUE_MESSAGE_ID:
-      minWhiteValue = (int)(data / 100) * MAX_DAC;
+      minWhiteValue_float = (data / 100) * MAX_DAC;
+      minWhiteValue = (int)minWhiteValue_float;
       Serial.println("Min White Value data =  " + String(data));
       Serial.println("Min White Value set to " + String(minWhiteValue));
       Serial.println("");
       break;
 
     case MIN_BLUE_VALUE_MESSAGE_ID:
-      minBlueValue = (int)(data / 100) * MAX_DAC;
+      minBlueValue_float = (data / 100) * MAX_DAC;
+      minBlueValue = (int)minBlueValue_float;
       Serial.println("Min Blue Value data =  " + String(data));
       Serial.println("Min Blue Value set to " + String(minBlueValue));
       Serial.println("");
@@ -558,6 +550,7 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
 
     case BLUE_1_MAX_INTENSITY_MESSAGE_ID:
       blue_1_MaxIntensity_float = (data / 100) * MAX_DAC;
+      blue_1_MaxIntensity = (int)blue_1_MaxIntensity_float;
       Serial.println("Blue 1 Max Intensity set to " + String(data));
       Serial.println("Blue 1 Max Intensity set to " + String(blue_1_MaxIntensity_float));
       Serial.println("");
@@ -565,6 +558,7 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
 
     case BLUE_2_MAX_INTENSITY_MESSAGE_ID:
       blue_2_MaxIntensity_float = (data / 100) * MAX_DAC;
+      blue_2_MaxIntensity = (int)blue_2_MaxIntensity_float;
       Serial.println("Blue 2 Max Intensity set to " + String(data));
       Serial.println("Blue 2 Max Intensity set to " + String(blue_2_MaxIntensity_float));
       Serial.println("");
@@ -572,6 +566,7 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
 
     case WHITE_1_MAX_INTENSITY_MESSAGE_ID:
       white_1_MaxIntensity_float = (data / 100) * MAX_DAC;
+      white_1_MaxIntensity = (int)white_1_MaxIntensity_float;
       Serial.println("White 1 Max Intensity set to " + String(data));
       Serial.println("White 1 Max Intensity set to " + String(white_1_MaxIntensity_float));
       Serial.println("");
@@ -579,6 +574,7 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
 
     case WHITE_2_MAX_INTENSITY_MESSAGE_ID:
       white_2_MaxIntensity_float = (data / 100) * MAX_DAC;
+      white_2_MaxIntensity = (int)white_2_MaxIntensity_float;
       Serial.println("White 2 Max Intensity set to " + String(data));
       Serial.println("White 2 Max Intensity set to " + String(white_2_MaxIntensity_float));
       Serial.println("");
@@ -591,28 +587,32 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
       break;
 
     case OVERRIDE_WHITE_1_INTENSITY_MESSAGE_ID:
-      overrideWhite_1_Intensity = (int)(data / 100) * MAX_DAC;
+      overrideWhite_1_Intensity_float = (data / 100) * MAX_DAC;
+      overrideWhite_1_Intensity = (int)overrideWhite_1_Intensity_float;
       Serial.println("Override White 1 Intensity set to " + String(data));
       Serial.println("Override White 1 Intensity set to " + String(overrideWhite_1_Intensity));
       Serial.println("");
       break;
 
     case OVERRIDE_WHITE_2_INTENSITY_MESSAGE_ID:
-      overrideWhite_2_Intensity = (int)(data / 100) * MAX_DAC;
+      overrideWhite_2_Intensity_float = (data / 100) * MAX_DAC;
+      overrideWhite_2_Intensity = (int)overrideWhite_2_Intensity_float;
       Serial.println("Override White 2 Intensity set to " + String(data));
       Serial.println("Override White 2 Intensity set to " + String(overrideWhite_2_Intensity));
       Serial.println("");
       break;
 
     case OVERRIDE_BLUE_1_INTENSITY_MESSAGE_ID:
-      overrideBlue_1_Intensity = (int)(data / 100) * MAX_DAC;
+      overrideBlue_1_Intensity_float = (data / 100) * MAX_DAC;
+      overrideBlue_1_Intensity = (int)overrideBlue_1_Intensity_float;
       Serial.println("Override Blue 1 Intensity set to " + String(data));
       Serial.println("Override Blue 1 Intensity set to " + String(overrideBlue_1_Intensity));
       Serial.println("");
       break;
 
     case OVERRIDE_BLUE_2_INTENSITY_MESSAGE_ID:
-      overrideBlue_2_Intensity = (int)(data / 100) * MAX_DAC;
+      overrideBlue_2_Intensity_float = (data / 100) * MAX_DAC;
+      overrideBlue_2_Intensity = (int)overrideBlue_2_Intensity_float;
       Serial.println("Override Blue 2 Intensity set to " + String(data));
       Serial.println("Override Blue 2 Intensity set to " + String(overrideBlue_2_Intensity));
       Serial.println("");
@@ -722,7 +722,7 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
 
     if (messageID == UPDATE_TIMEZONE_OFFSET_MESSAGE_ID)
     {
-      localTimeZoneOffset = (int)data;
+      localTimeZoneOffset = data;
       localTimeZone = "UTC+" + String(localTimeZoneOffset);
       localTimeZone.toCharArray(buf_localTimeZone, 8);
       setenv("TZ", buf_localTimeZone, 1);
@@ -754,25 +754,25 @@ void SendLEDIntensities(void *parameters)
   {
     if (!manualOverrideSwitch)
     {
-      uint64_t White_1_Intensity;
-      uint64_t White_2_Intensity;
-      uint64_t Blue_1_Intensity;
-      uint64_t Blue_2_Intensity;
-      float White_1_Intensity_float = (currentWhite_1_Intensity / MAX_DAC) * 100;
-      float White_2_Intensity_float = (currentWhite_2_Intensity / MAX_DAC) * 100;
-      float Blue_1_Intensity_float = (currentBlue_1_Intensity / MAX_DAC) * 100;
-      float Blue_2_Intensity_float = (currentBlue_2_Intensity / MAX_DAC) * 100;
-      White_1_Intensity = (uint64_t)White_1_Intensity_float;
-      White_2_Intensity = (uint64_t)White_2_Intensity_float;
-      Blue_1_Intensity = (uint64_t)Blue_1_Intensity_float;
-      Blue_2_Intensity = (uint64_t)Blue_2_Intensity_float;
-      core.sendMessage(CURRENT_WHITE_1_MESSAGE_ID, &White_1_Intensity, false); // Send the white LED intensity on the Canbus
+      uint64_t CurrentWhite_1_Intensity;
+      uint64_t CurrentWhite_2_Intensity;
+      uint64_t CurrentBlue_1_Intensity;
+      uint64_t CurrentBlue_2_Intensity;
+      float currentWhite_1_Intensity_float = (currentWhite_1_Intensity / MAX_DAC) * 100;
+      float currentWhite_2_Intensity_float = (currentWhite_2_Intensity / MAX_DAC) * 100;
+      float currentBlue_1_Intensity_float = (currentBlue_1_Intensity / MAX_DAC) * 100;
+      float currentBlue_2_Intensity_float = (currentBlue_2_Intensity / MAX_DAC) * 100;
+      CurrentWhite_1_Intensity = (uint64_t)currentWhite_1_Intensity_float;
+      CurrentWhite_2_Intensity = (uint64_t)currentWhite_2_Intensity_float;
+      CurrentBlue_1_Intensity = (uint64_t)currentBlue_1_Intensity_float;
+      CurrentBlue_2_Intensity = (uint64_t)currentBlue_2_Intensity_float;
+      core.sendMessage(CURRENT_WHITE_1_MESSAGE_ID, &CurrentWhite_1_Intensity, false); // Send the white LED intensity on the Canbus
       delay(updateLEDs);
-      core.sendMessage(CURRENT_WHITE_2_MESSAGE_ID, &White_2_Intensity, false); // Send the white LED intensity on the Canbus
+      core.sendMessage(CURRENT_WHITE_2_MESSAGE_ID, &CurrentWhite_2_Intensity, false); // Send the white LED intensity on the Canbus
       delay(updateLEDs);
-      core.sendMessage(CURRENT_BLUE_1_MESSAGE_ID, &Blue_1_Intensity, false); // Send the blue LED intensity on the Canbus
+      core.sendMessage(CURRENT_BLUE_1_MESSAGE_ID, &CurrentBlue_1_Intensity, false); // Send the blue LED intensity on the Canbus
       delay(updateLEDs);
-      core.sendMessage(CURRENT_BLUE_2_MESSAGE_ID, &Blue_2_Intensity, false); // Send the blue LED intensity on the Canbus
+      core.sendMessage(CURRENT_BLUE_2_MESSAGE_ID, &CurrentBlue_2_Intensity, false); // Send the blue LED intensity on the Canbus
       delay(sendMqttMessageUpdateUI);
     }
     else
@@ -875,6 +875,12 @@ void updateTimes()
   while (1)
   {
     delay(MessageGap);
+    localTimeZone = "UTC+" + String(localTimeZoneOffset);
+    localTimeZone.toCharArray(buf_localTimeZone, 8);
+    setenv("TZ", buf_localTimeZone, 1);
+    tzset();                                                                                                                    // Get the local time
+    localtime_r(&UNIXtime, &timeinfo);                                                                                          // Get the local time
+    strftime(localTime, sizeof(localTime), "%c", &timeinfo);                                                                    // Get the current time from the ESP32 RTC
     curTimeSec = timeinfo.tm_hour * 3600 + timeinfo.tm_min * 60 + timeinfo.tm_sec;                                              //  get the start time in seconds since midnight
     dawnDurationSec = (((sunriseHours * 3600) + (sunriseMinutes * 60)) - ((dawnHours * 3600) + (dawnMinutes * 60)));            //  calculate the duration of the dawn cycle in seconds
     sunriseDurationSec = (((highNoonHours * 3600) + (highNoonMinutes * 60)) - ((sunriseHours * 3600) + (sunriseMinutes * 60))); //  calculate the duration of the sunrise cycle in seconds
@@ -891,9 +897,9 @@ void updateTimes()
 
 #ifdef debuging
     Serial.println("Running updateTimes function");
-    Serial.println("timeinfo = " + String());
     Serial.println("UNIXtime = " + String(UNIXtime));
-    Serial.println("24 hour time = " + String(timeinfo.tm_hour) + ":" + String(timeinfo.tm_min) + ":" + String(timeinfo.tm_sec));
+    Serial.println("localTime = " + String(localTime));
+    Serial.println("24 hour time = " + String(timeinfo.tm_year) + "," + String(timeinfo.tm_mon) + " " + String(timeinfo.tm_wday) + " " + String(timeinfo.tm_hour) + ":" + String(timeinfo.tm_min) + ":" + String(timeinfo.tm_sec));
     Serial.println("curTimeSec in seconds  = " + String(curTimeSec));
     Serial.println("dawnDurationSec = " + String(dawnDurationSec));
     Serial.println("sunriseDurationSec = " + String(sunriseDurationSec));
