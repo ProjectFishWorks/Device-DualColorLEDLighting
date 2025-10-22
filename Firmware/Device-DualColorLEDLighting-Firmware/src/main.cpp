@@ -4,102 +4,123 @@
 #include <SPI.h>
 #include <time.h>
 #include <Adafruit_MCP4728.h>
+#include "DFRobot_GP8403.h"
 
 #define debuging
 #define debugingTime // comment out to remove time debuging
+
+// #define usingAdafruit_MCP4728
+#define usingDFRobot_GP8403
+// #define using_2X_DFRobot_GP8403
 
 //  RELAY logic, change if inverted logic
 #define RELAY_ON 1
 #define RELAY_OFF 0
 
-//  DAC object
+#ifdef usingDFRobot_GP8403
+// create an instance DFRobot_GP8403 of DAC using the Wire library
+DFRobot_GP8403 DFRobot_GP8403_1(&Wire, 0x5F); // instance of the DAC at I2C address 0x5F
+DFRobot_GP8403 DFRobot_GP8403_2(&Wire, 0x60); // instance of the DAC at I2C address 0x60
+#define WHITE_1_DAC_DFRobot 0                 // DAC channel for WHITE_1
+#define WHITE_2_DAC_DFRobot 0                 // DAC channel for WHITE_2
+#define BLUE_1_DAC_DFRobot 1                  // DAC channel for BLUE_1
+#define BLUE_2_DAC_DFRobot 1                  // DAC channel for BLUE_2
+int MAX_DAC = 10000;                          // maximum DAC output value for 10V range
+int DAC_OFF = 0;                              // value to turn off the DAC output
+#endif
+
+#ifdef usingAdafruit_MCP4728
+// Adafruit_MCP4728 DAC object
 Adafruit_MCP4728 MCP12bitDAC; //  create the MCP4728 object 12 bits of resolution = 4096 steps, so MAX_DAC = 4095
 int MAX_DAC = 4095;           //  this can be changed if there is a different resolution than 12bit
 int DAC_OFF = MAX_DAC;        //  change this to 0 if the DAC is not inverted
+#endif
 
 // USE int FOR I2C PIN DEFINITIONS
 int I2C_SDA = 2;
 int I2C_SCL = 3;
 
 // define the node ID and message IDs
-#define BASESTATION_ID 0x00                        // 0
-#define NODE_ID 0xA1                               // 161
-#define UNIX_TIME_MESSAGE_ID 2000                  // 2000
-#define UPDATE_TIMEZONE_OFFSET_MESSAGE_ID 2001     // 2001
-#define DAWN_MINUTES_MESSAGE_ID 2560               // 0xA00
-int dawnMinutes;                                   // variable to store the dawn minutes message data
-#define DAWN_HOURS_MESSAGE_ID 2561                 // 0xA01
-int dawnHours;                                     // variable to store the dawn hours message data
-#define DUSK_MINUTES_MESSAGE_ID 2562               // 0xA02
-int duskMinutes;                                   // variable to store the dusk minutes message data
-#define DUSK_HOURS_MESSAGE_ID 2563                 // 0xA03
-int duskHours;                                     // variable to store the dusk hours message data
-#define SUNRISE_MINUTES_MESSAGE_ID 2564            // 0xA04
-int sunriseMinutes;                                // variable to store the sunrise minutes message data
-#define SUNRISE_HOURS_MESSAGE_ID 2565              // 0xA05
-int sunriseHours;                                  // variable to store the sunrise hours message data
-#define SUNSET_MINUTES_MESSAGE_ID 2566             // 0xA06
-int sunsetMinutes;                                 // variable to store the sunset minutes message data
-#define SUNSET_HOURS_MESSAGE_ID 2567               // 0xA07
-int sunsetHours;                                   // variable to store the sunset hours message data
-#define HIGH_NOON_MINUTES_MESSAGE_ID 2568          // 0xA08
-int highNoonMinutes;                               // variable to store the high noon minutes message data
-#define HIGH_NOON_HOURS_MESSAGE_ID 2569            // 0xA09
-int highNoonHours;                                 // variable to store the high noon hours message data
-#define NIGHT_TIME_MINUTES_MESSAGE_ID 2570         // 0xA0A
-int nightTimeMinutes;                              // variable to store the night time minutes message data
-#define NIGHT_TIME_HOURS_MESSAGE_ID 2571           // 0xA0B
-int nightTimeHours;                                // variable to store the night time hours message data
-#define BLUE_1_MAX_INTENSITY_MESSAGE_ID 2572       // 0xA0C
-int blue_1_MaxIntensity;                           // variable to store the blue_1 max intensity message data
-float blue_1_MaxIntensity_float;                   // variable to store the blue_1 max intensity message data
-#define BLUE_2_MAX_INTENSITY_MESSAGE_ID 2573       // 0xA0D
-int blue_2_MaxIntensity;                           // variable to store the blue_2 max intensity message data
-float blue_2_MaxIntensity_float;                   // variable to store the blue_2 max intensity message data
-#define WHITE_1_MAX_INTENSITY_MESSAGE_ID 2574      // 0xA0E
-int white_1_MaxIntensity;                          // variable to store the white_1 max intensity message data
-float white_1_MaxIntensity_float;                  // variable to store the white_1 max intensity message data
-#define WHITE_2_MAX_INTENSITY_MESSAGE_ID 2575      // 0xA0F
-int white_2_MaxIntensity;                          // variable to store the white_2 max intensity message data
-float white_2_MaxIntensity_float;                  // variable to store the white_2 max intensity message data
-#define CURRENT_WHITE_1_MESSAGE_ID 2576            // 0xA10
-int currentWhite_1_Intensity;                      // variable to store the current white_1 intensity message data
-float currentWhite_1_Intensity_float;              // variable to store the current white_1 intensity message data
-#define CURRENT_WHITE_2_MESSAGE_ID 2577            // 0xA11
-int currentWhite_2_Intensity;                      // variable to store the current white_2 intensity message data
-float currentWhite_2_Intensity_float;              // variable to store the current white_2 intensity message data
-#define CURRENT_BLUE_1_MESSAGE_ID 2578             // 0xA12
-int currentBlue_1_Intensity;                       // variable to store the current blue_1 intensity message data
-float currentBlue_1_Intensity_float;               // variable to store the current blue_1 intensity message data
-#define CURRENT_BLUE_2_MESSAGE_ID 2579             // 0xA13
-int currentBlue_2_Intensity;                       // variable to store the current blue_2 intensity message data
-float currentBlue_2_Intensity_float;               // variable to store the current blue_2 intensity message data
-#define MANUAL_OVERRIDE_SWITCH_MESSAGE_ID 2580     // 0xA14
-bool manualOverrideSwitch = false;                 // variable to store the manual override switch message data
-#define OVERRIDE_WHITE_1_INTENSITY_MESSAGE_ID 2581 // 0xA15
-int overrideWhite_1_Intensity;                     // variable to store the override white_1 intensity message data
-float overrideWhite_1_Intensity_float;             // variable to store the override white_1 intensity message data
-#define OVERRIDE_WHITE_2_INTENSITY_MESSAGE_ID 2582 // 0xA16
-int overrideWhite_2_Intensity;                     // variable to store the override white_2 intensity message data
-float overrideWhite_2_Intensity_float;             // variable to store the override white_2 intensity message data
-#define OVERRIDE_BLUE_1_INTENSITY_MESSAGE_ID 2583  // 0xA17
-int overrideBlue_1_Intensity;                      // variable to store the override blue_1 intensity message data
-float overrideBlue_1_Intensity_float;              // variable to store the override blue_1 intensity message data
-#define OVERRIDE_BLUE_2_INTENSITY_MESSAGE_ID 2584  // 0xA18
-int overrideBlue_2_Intensity;                      // variable to store the override blue_2 intensity message data
-float overrideBlue_2_Intensity_float;              // variable to store the override blue_2 intensity message data
-#define MIN_WHITE_VALUE_MESSAGE_ID 2585            // 0xA19
-int minWhiteValue;                                 // variable to store the min white value message data
-float minWhiteValue_float;                         // variable to store the min white value message data
-#define MIN_BLUE_VALUE_MESSAGE_ID 2586             // 0xA1A
-int minBlueValue;                                  // variable to store the min blue value message data
-float minBlueValue_float;                          // variable to store the min blue value message data
+#define BASESTATION_ID 0x00                         // 0
+#define NODE_ID 0xA1                                // 161
+#define UNIX_TIME_MESSAGE_ID 2000                   // 2000
+#define UPDATE_TIMEZONE_OFFSET_MESSAGE_ID 2001      // 2001
+#define DAWN_MINUTES_MESSAGE_ID 25060               // 0xA00
+uint64_t dawnMinutes;                               // variable to store the dawn minutes message data
+#define DAWN_HOURS_MESSAGE_ID 25061                 // 0xA01
+uint64_t dawnHours;                                 // variable to store the dawn hours message data
+#define DUSK_MINUTES_MESSAGE_ID 25062               // 0xA02
+uint64_t duskMinutes;                               // variable to store the dusk minutes message data
+#define DUSK_HOURS_MESSAGE_ID 25063                 // 0xA03
+uint64_t duskHours;                                 // variable to store the dusk hours message data
+#define SUNRISE_MINUTES_MESSAGE_ID 25064            // 0xA04
+uint64_t sunriseMinutes;                            // variable to store the sunrise minutes message data
+#define SUNRISE_HOURS_MESSAGE_ID 25065              // 0xA05
+uint64_t sunriseHours;                              // variable to store the sunrise hours message data
+#define SUNSET_MINUTES_MESSAGE_ID 25066             // 0xA06
+uint64_t sunsetMinutes;                             // variable to store the sunset minutes message data
+#define SUNSET_HOURS_MESSAGE_ID 25067               // 0xA07
+uint64_t sunsetHours;                               // variable to store the sunset hours message data
+#define HIGH_NOON_MINUTES_MESSAGE_ID 25068          // 0xA08
+uint64_t highNoonMinutes;                           // variable to store the high noon minutes message data
+#define HIGH_NOON_HOURS_MESSAGE_ID 25069            // 0xA09
+uint64_t highNoonHours;                             // variable to store the high noon hours message data
+#define NIGHT_TIME_MINUTES_MESSAGE_ID 25070         // 0xA0A
+uint64_t nightTimeMinutes;                          // variable to store the night time minutes message data
+#define NIGHT_TIME_HOURS_MESSAGE_ID 25071           // 0xA0B
+uint64_t nightTimeHours;                            // variable to store the night time hours message data
+#define BLUE_1_MAX_INTENSITY_MESSAGE_ID 25072       // 0xA0C
+int blue_1_MaxIntensity;                            // variable to store the blue_1 max intensity message data
+float blue_1_MaxIntensity_float;                    // variable to store the blue_1 max intensity message data
+#define BLUE_2_MAX_INTENSITY_MESSAGE_ID 25073       // 0xA0D
+int blue_2_MaxIntensity;                            // variable to store the blue_2 max intensity message data
+float blue_2_MaxIntensity_float;                    // variable to store the blue_2 max intensity message data
+#define WHITE_1_MAX_INTENSITY_MESSAGE_ID 25074      // 0xA0E
+int white_1_MaxIntensity;                           // variable to store the white_1 max intensity message data
+float white_1_MaxIntensity_float;                   // variable to store the white_1 max intensity message data
+#define WHITE_2_MAX_INTENSITY_MESSAGE_ID 25075      // 0xA0F
+int white_2_MaxIntensity;                           // variable to store the white_2 max intensity message data
+float white_2_MaxIntensity_float;                   // variable to store the white_2 max intensity message data
+#define CURRENT_WHITE_1_MESSAGE_ID 25076            // 0xA10
+int currentWhite_1_Intensity;                       // variable to store the current white_1 intensity message data
+float currentWhite_1_Intensity_float;               // variable to store the current white_1 intensity message data
+#define CURRENT_WHITE_2_MESSAGE_ID 25077            // 0xA11
+int currentWhite_2_Intensity;                       // variable to store the current white_2 intensity message data
+float currentWhite_2_Intensity_float;               // variable to store the current white_2 intensity message data
+#define CURRENT_BLUE_1_MESSAGE_ID 25078             // 0xA12
+int currentBlue_1_Intensity;                        // variable to store the current blue_1 intensity message data
+float currentBlue_1_Intensity_float;                // variable to store the current blue_1 intensity message data
+#define CURRENT_BLUE_2_MESSAGE_ID 25079             // 0xA13
+int currentBlue_2_Intensity;                        // variable to store the current blue_2 intensity message data
+float currentBlue_2_Intensity_float;                // variable to store the current blue_2 intensity message data
+#define MANUAL_OVERRIDE_SWITCH_MESSAGE_ID 25080     // 0xA14
+bool manualOverrideSwitch = false;                  // variable to store the manual override switch message data
+#define OVERRIDE_WHITE_1_INTENSITY_MESSAGE_ID 25081 // 0xA15
+int overrideWhite_1_Intensity;                      // variable to store the override white_1 intensity message data
+float overrideWhite_1_Intensity_float;              // variable to store the override white_1 intensity message data
+#define OVERRIDE_WHITE_2_INTENSITY_MESSAGE_ID 25082 // 0xA16
+int overrideWhite_2_Intensity;                      // variable to store the override white_2 intensity message data
+float overrideWhite_2_Intensity_float;              // variable to store the override white_2 intensity message data
+#define OVERRIDE_BLUE_1_INTENSITY_MESSAGE_ID 25083  // 0xA17
+int overrideBlue_1_Intensity;                       // variable to store the override blue_1 intensity message data
+float overrideBlue_1_Intensity_float;               // variable to store the override blue_1 intensity message data
+#define OVERRIDE_BLUE_2_INTENSITY_MESSAGE_ID 25084  // 0xA18
+int overrideBlue_2_Intensity;                       // variable to store the override blue_2 intensity message data
+float overrideBlue_2_Intensity_float;               // variable to store the override blue_2 intensity message data
+#define MIN_WHITE_VALUE_MESSAGE_ID 25085            // 0xA19
+int minWhiteValue;                                  // variable to store the min white value message data
+float minWhiteValue_float;                          // variable to store the min white value message data
+#define MIN_BLUE_VALUE_MESSAGE_ID 25086             // 0xA1A
+int minBlueValue;                                   // variable to store the min blue value message data
+float minBlueValue_float;                           // variable to store the min blue value message data
 
+#ifdef usingAdafruit_MCP4728
 // colored and numbered names for the DAC channels to take values from 0-4095
 #define WHITE_1_DAC MCP4728_CHANNEL_A
 #define WHITE_2_DAC MCP4728_CHANNEL_B
 #define BLUE_1_DAC MCP4728_CHANNEL_C
 #define BLUE_2_DAC MCP4728_CHANNEL_D
+#endif
 
 // RELAY pins
 #define BLUE_RELAY 3
@@ -115,6 +136,7 @@ String localTimeZone;        // "UTC+" + localTimeZoneOffset
 int localTimeZoneOffset = 8; // Timezone offset
 char buf_localTimeZone[8];   // Char array Buffer for timezone string
 struct tm timeinfo;          // Time structure
+struct timeval tv;           // Time value structure
 time_t UNIXtime;             // UNIX time
 int curTimeSec;              //  get the start time in seconds since midnight
 int dawnStart;               //  start time of dawn in seconds since midnight
@@ -169,6 +191,41 @@ void setup()
   Serial.println("Initializing I2C Communication");
   Serial.println("");
 
+  //  Initialize the LEDC channel
+  ledcSetup(0, 5000, 12); //  setup the LEDC channel 0 with a frequency of 5000Hz and 12 bit resolution
+
+#ifdef usingDFRobot_GP8403
+  //  Initialize the DAC
+  Serial.println("Initializing DFRobot GP8403 DAC");
+  Serial.println("");
+  if (!DFRobot_GP8403_1.begin())
+  {
+    Serial.println("Error initializing DFRobot GP8403 DAC");
+    Serial.println("Please check your connections");
+    Serial.println("");
+  }
+  else
+  {
+    Serial.println("DFRobot GP8403 DAC Initialized");
+    Serial.println("");
+  }
+#endif
+
+#ifdef using_2X_DFRobot_GP8403
+  if (!DFRobot_GP8403_2.begin())
+  {
+    Serial.println("Error initializing 2nd DFRobot GP8403 DAC");
+    Serial.println("Please check your connections");
+    Serial.println("");
+  }
+  else
+  {
+    Serial.println("2nd DFRobot GP8403 DAC Initialized");
+    Serial.println("");
+  }
+#endif
+
+#ifdef usingAdafruit_MCP4728
   //  Initialize the DAC
   MCP12bitDAC.begin();
   while (!MCP12bitDAC.begin())
@@ -228,6 +285,7 @@ void setup()
       MCP4728_GAIN_2X);
 
   MCP12bitDAC.saveToEEPROM();
+#endif
 
   // Setup RELAY pins
   pinMode(BLUE_RELAY, OUTPUT);
@@ -285,12 +343,22 @@ void LightCycles(void *parameters)
     updateTimes();
 
     // Set the LEDs to off in no Light cycles are valid times
+
+#ifdef usingDFRobot_GP8403
+    DFRobot_GP8403_1.setDACOutVoltage(WHITE_1_DAC_DFRobot, DAC_OFF); //  set the WHITE_1_DAC to 0V
+    DFRobot_GP8403_2.setDACOutVoltage(WHITE_2_DAC_DFRobot, DAC_OFF); //  set the WHITE_2_DAC to 0V
+    DFRobot_GP8403_1.setDACOutVoltage(BLUE_1_DAC_DFRobot, DAC_OFF);  //  set the BLUE_1_DAC to 0V
+    DFRobot_GP8403_2.setDACOutVoltage(BLUE_2_DAC_DFRobot, DAC_OFF);  //  set the BLUE_2_DAC to 0V
+#endif
+
+#ifdef usingAdafruit_MCP4728
     MCP12bitDAC.setChannelValue(WHITE_1_DAC, DAC_OFF); //  set the WHITE_1_DAC to DAC_OFF
     MCP12bitDAC.setChannelValue(WHITE_2_DAC, DAC_OFF); //  set the WHITE_2_DAC to DAC_OFF
     MCP12bitDAC.setChannelValue(BLUE_1_DAC, DAC_OFF);  //  set the BLUE_1_DAC to DAC_OFF
     MCP12bitDAC.setChannelValue(BLUE_2_DAC, DAC_OFF);  //  set the BLUE_2_DAC to DAC_OFF
-    digitalWrite(BLUE_RELAY, RELAY_OFF);               // turn off the blue relay
-    digitalWrite(WHITE_RELAY, RELAY_OFF);              // turn off the white relay
+#endif
+    digitalWrite(BLUE_RELAY, RELAY_OFF);  // turn off the blue relay
+    digitalWrite(WHITE_RELAY, RELAY_OFF); // turn off the white relay
 
 #ifdef debuging
     Serial.println("Blue LED off");
@@ -307,8 +375,17 @@ void LightCycles(void *parameters)
       updateTimes();                                                                                             //  check if the manual override switch is on
       currentBlue_1_Intensity = map(curTimeSec, dawnStart, dawnStart + dawnDurationSec, 0, blue_1_MaxIntensity); //  map the current time to the start time and the duration of the dawnDurationSec
       currentBlue_2_Intensity = map(curTimeSec, dawnStart, dawnStart + dawnDurationSec, 0, blue_2_MaxIntensity); //  map the current time to the start time and the duration of the dawnDurationSec
-      MCP12bitDAC.setChannelValue(BLUE_1_DAC, MAX_DAC - currentBlue_1_Intensity);                                //  set the BLUE_1_DAC to the mapped intensity
-      MCP12bitDAC.setChannelValue(BLUE_2_DAC, MAX_DAC - currentBlue_2_Intensity);                                //  set the BLUE_2_DAC to the mapped intensity
+
+#ifdef usingDFRobot_GP8403
+      DFRobot_GP8403_1.setDACOutVoltage(BLUE_1_DAC_DFRobot, currentBlue_1_Intensity);   //  set the BLUE_1_DAC to the mapped intensity
+      DFRobot_GP8403_2.setDACOutVoltage(BLUE_2_DAC_DFRobot, currentBlue_2_Intensity);   //  set the BLUE_2_DAC to the mapped intensity
+#endif
+
+#ifdef usingAdafruit_MCP4728
+      MCP12bitDAC.setChannelValue(BLUE_1_DAC, MAX_DAC - currentBlue_1_Intensity);       //  set the BLUE_1_DAC to the mapped intensity
+      MCP12bitDAC.setChannelValue(BLUE_2_DAC, MAX_DAC - currentBlue_2_Intensity);       //  set the BLUE_2_DAC to the mapped intensity
+#endif
+
       if (currentBlue_1_Intensity <= minBlueValue)
       {
         digitalWrite(BLUE_RELAY, RELAY_OFF); //  turn off the blue relay
@@ -320,18 +397,20 @@ void LightCycles(void *parameters)
       }
 
 #ifdef debuging
+      Serial.println("while (curTimeSec >= dawnStart && curTimeSec < sunriseStart)");
       Serial.println("UNIXtime = " + String(UNIXtime));
-      Serial.print("curTimeSec = " + String(curTimeSec));
-      Serial.print("dawnDurationSec = " + String(dawnDurationSec));
-      Serial.print("dawnStart = " + String(dawnStart));
-      Serial.print("blue_1_MaxIntensity = " + String(blue_1_MaxIntensity));
-      Serial.print("currentBlue_1_Intensity = " + String(currentBlue_1_Intensity));
-      Serial.print("currentWhite_1_Intensity = " + String(currentWhite_1_Intensity));
-      Serial.print("Blue relay = " + String(digitalRead(BLUE_RELAY)));
-      Serial.print("White relay = " + String(digitalRead(WHITE_RELAY)));
+      Serial.println("curTimeSec = " + String(curTimeSec));
+      Serial.println("dawnDurationSec = " + String(dawnDurationSec));
+      Serial.println("dawnStart = " + String(dawnStart));
+      Serial.println("blue_1_MaxIntensity = " + String(blue_1_MaxIntensity));
+      Serial.println("currentBlue_1_Intensity = " + String(currentBlue_1_Intensity));
+      Serial.println("currentWhite_1_Intensity = " + String(currentWhite_1_Intensity));
+      Serial.println("Blue relay = " + String(digitalRead(BLUE_RELAY)));
+      Serial.println("White relay = " + String(digitalRead(WHITE_RELAY)));
       Serial.println("");
 #endif
     }
+
     //----------------------------------- "Sunrise" Fade blue and white to highNoon  --------------------------------------------------
     while (curTimeSec >= sunriseStart && curTimeSec < highNoonStart)
     {
@@ -343,10 +422,20 @@ void LightCycles(void *parameters)
       currentBlue_2_Intensity = map(curTimeSec, sunriseStart, sunriseStart + sunriseDurationSec, minBlueValue, blue_2_MaxIntensity);
       currentWhite_1_Intensity = map(curTimeSec, sunriseStart, sunriseStart + sunriseDurationSec, minBlueValue, white_1_MaxIntensity);
       currentWhite_2_Intensity = map(curTimeSec, sunriseStart, sunriseStart + sunriseDurationSec, minBlueValue, white_2_MaxIntensity);
+
+      #ifdef usingDFRobot_GP8403
+      DFRobot_GP8403_1.setDACOutVoltage(BLUE_1_DAC_DFRobot, currentBlue_1_Intensity);
+      DFRobot_GP8403_1.setDACOutVoltage(BLUE_2_DAC_DFRobot, currentBlue_2_Intensity);
+      DFRobot_GP8403_1.setDACOutVoltage(WHITE_1_DAC_DFRobot, currentWhite_1_Intensity);
+      DFRobot_GP8403_1.setDACOutVoltage(WHITE_2_DAC_DFRobot, currentWhite_2_Intensity);
+      #endif
+
+      #ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(BLUE_1_DAC, MAX_DAC - currentBlue_1_Intensity);
       MCP12bitDAC.setChannelValue(BLUE_2_DAC, MAX_DAC - currentBlue_2_Intensity);
       MCP12bitDAC.setChannelValue(WHITE_1_DAC, MAX_DAC - currentWhite_1_Intensity);
       MCP12bitDAC.setChannelValue(WHITE_2_DAC, MAX_DAC - currentWhite_2_Intensity);
+      #endif
 
       if (currentWhite_1_Intensity <= minWhiteValue)
       {
@@ -359,15 +448,16 @@ void LightCycles(void *parameters)
       }
 
 #ifdef debuging
+      Serial.println("while (curTimeSec >= sunriseStart && curTimeSec < highNoonStart)");
       Serial.println("UNIXtime = " + String(UNIXtime));
-      Serial.print("curTimeSec = " + String(curTimeSec));
-      Serial.print("sunriseDurationSec = " + String(sunriseDurationSec));
-      Serial.print("sunriseStart = " + String(sunriseStart));
-      Serial.print("blue_1_MaxIntensity = " + String(blue_1_MaxIntensity));
-      Serial.print("currentBlue_1_Intensity = " + String(currentBlue_1_Intensity));
-      Serial.print("currentWhite_1_Intensity = " + String(currentWhite_1_Intensity));
-      Serial.print("Blue relay = " + String(digitalRead(BLUE_RELAY)));
-      Serial.print("White relay = " + String(digitalRead(WHITE_RELAY)));
+      Serial.println("curTimeSec = " + String(curTimeSec));
+      Serial.println("sunriseDurationSec = " + String(sunriseDurationSec));
+      Serial.println("sunriseStart = " + String(sunriseStart));
+      Serial.println("blue_1_MaxIntensity = " + String(blue_1_MaxIntensity));
+      Serial.println("currentBlue_1_Intensity = " + String(currentBlue_1_Intensity));
+      Serial.println("currentWhite_1_Intensity = " + String(currentWhite_1_Intensity));
+      Serial.println("Blue relay = " + String(digitalRead(BLUE_RELAY)));
+      Serial.println("White relay = " + String(digitalRead(WHITE_RELAY)));
       Serial.println("");
 #endif
     }
@@ -383,21 +473,32 @@ void LightCycles(void *parameters)
       currentBlue_2_Intensity = blue_2_MaxIntensity;
       currentWhite_1_Intensity = white_1_MaxIntensity;
       currentWhite_2_Intensity = white_2_MaxIntensity;
+
+      #ifdef usingDFRobot_GP8403
+      DFRobot_GP8403_1.setDACOutVoltage(BLUE_1_DAC_DFRobot, currentBlue_1_Intensity);
+      DFRobot_GP8403_1.setDACOutVoltage(BLUE_2_DAC_DFRobot, currentBlue_2_Intensity);
+      DFRobot_GP8403_1.setDACOutVoltage(WHITE_1_DAC_DFRobot, currentWhite_1_Intensity);
+      DFRobot_GP8403_1.setDACOutVoltage(WHITE_2_DAC_DFRobot, currentWhite_2_Intensity);
+      #endif
+
+      #ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(BLUE_1_DAC, MAX_DAC - currentBlue_1_Intensity);
       MCP12bitDAC.setChannelValue(BLUE_2_DAC, MAX_DAC - currentBlue_2_Intensity);
       MCP12bitDAC.setChannelValue(WHITE_1_DAC, MAX_DAC - currentWhite_1_Intensity);
       MCP12bitDAC.setChannelValue(WHITE_2_DAC, MAX_DAC - currentWhite_2_Intensity);
+      #endif
 
 #ifdef debuging
+      Serial.println("while (curTimeSec >= highNoonStart && curTimeSec < sunriseStart)");
       Serial.println("UNIXtime = " + String(UNIXtime));
-      Serial.print("curTimeSec = " + String(curTimeSec));
-      Serial.print("highNoonDurationSec = " + String(highNoonDurationSec));
-      Serial.print("highNoonStart = " + String(highNoonStart));
-      Serial.print("blue_1_MaxIntensity = " + String(blue_1_MaxIntensity));
-      Serial.print("currentBlue_1_Intensity = " + String(currentBlue_1_Intensity));
-      Serial.print("currentWhite_1_Intensity = " + String(currentWhite_1_Intensity));
-      Serial.print("Blue relay = " + String(digitalRead(BLUE_RELAY)));
-      Serial.print("White relay = " + String(digitalRead(WHITE_RELAY)));
+      Serial.println("curTimeSec = " + String(curTimeSec));
+      Serial.println("highNoonDurationSec = " + String(highNoonDurationSec));
+      Serial.println("highNoonStart = " + String(highNoonStart));
+      Serial.println("blue_1_MaxIntensity = " + String(blue_1_MaxIntensity));
+      Serial.println("currentBlue_1_Intensity = " + String(currentBlue_1_Intensity));
+      Serial.println("currentWhite_1_Intensity = " + String(currentWhite_1_Intensity));
+      Serial.println("Blue relay = " + String(digitalRead(BLUE_RELAY)));
+      Serial.println("White relay = " + String(digitalRead(WHITE_RELAY)));
       Serial.println("");
 #endif
     }
@@ -413,10 +514,20 @@ void LightCycles(void *parameters)
       currentBlue_2_Intensity = map(curTimeSec, sunsetStart, sunsetStart + sunsetDurationSec, blue_2_MaxIntensity, minBlueValue);
       currentWhite_1_Intensity = map(curTimeSec, sunsetStart, sunsetStart + sunsetDurationSec, white_1_MaxIntensity, minWhiteValue);
       currentWhite_2_Intensity = map(curTimeSec, sunsetStart, sunsetStart + sunsetDurationSec, white_2_MaxIntensity, minWhiteValue);
+
+      #ifdef usingDFRobot_GP8403
+      DFRobot_GP8403_1.setDACOutVoltage(BLUE_1_DAC_DFRobot, currentBlue_1_Intensity);
+      DFRobot_GP8403_1.setDACOutVoltage(BLUE_2_DAC_DFRobot, currentBlue_2_Intensity);
+      DFRobot_GP8403_1.setDACOutVoltage(WHITE_1_DAC_DFRobot, currentWhite_1_Intensity);
+      DFRobot_GP8403_1.setDACOutVoltage(WHITE_2_DAC_DFRobot, currentWhite_2_Intensity);
+      #endif
+
+      #ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(BLUE_1_DAC, MAX_DAC - currentBlue_1_Intensity);
       MCP12bitDAC.setChannelValue(BLUE_2_DAC, MAX_DAC - currentBlue_2_Intensity);
       MCP12bitDAC.setChannelValue(WHITE_1_DAC, MAX_DAC - currentWhite_1_Intensity);
       MCP12bitDAC.setChannelValue(WHITE_2_DAC, MAX_DAC - currentWhite_2_Intensity);
+      #endif
 
       if (currentWhite_1_Intensity <= minWhiteValue)
       {
@@ -429,15 +540,16 @@ void LightCycles(void *parameters)
       }
 
 #ifdef debuging
+      Serial.println("while (curTimeSec >= sunsetStart && curTimeSec < duskStart)");
       Serial.println("UNIXtime = " + String(UNIXtime));
-      Serial.print("curTimeSec = " + String(curTimeSec));
-      Serial.print("sunsetDurationSec = " + String(sunsetDurationSec));
-      Serial.print("sunsetStart = " + String(sunsetStart));
-      Serial.print("blue_1_MaxIntensity = " + String(blue_1_MaxIntensity));
-      Serial.print("currentBlue_1_Intensity = " + String(currentBlue_1_Intensity));
-      Serial.print("currentWhite_1_Intensity = " + String(currentWhite_1_Intensity));
-      Serial.print("Blue relay = " + String(digitalRead(BLUE_RELAY)));
-      Serial.print("White relay = " + String(digitalRead(WHITE_RELAY)));
+      Serial.println("curTimeSec = " + String(curTimeSec));
+      Serial.println("sunsetDurationSec = " + String(sunsetDurationSec));
+      Serial.println("sunsetStart = " + String(sunsetStart));
+      Serial.println("blue_1_MaxIntensity = " + String(blue_1_MaxIntensity));
+      Serial.println("currentBlue_1_Intensity = " + String(currentBlue_1_Intensity));
+      Serial.println("currentWhite_1_Intensity = " + String(currentWhite_1_Intensity));
+      Serial.println("Blue relay = " + String(digitalRead(BLUE_RELAY)));
+      Serial.println("White relay = " + String(digitalRead(WHITE_RELAY)));
       Serial.println("");
 #endif
     }
@@ -451,8 +563,16 @@ void LightCycles(void *parameters)
       delay(updateLEDs);
       currentBlue_1_Intensity = map(curTimeSec, duskStart, duskStart + duskDurationSec, minBlueValue, blue_1_MaxIntensity);
       currentBlue_2_Intensity = map(curTimeSec, duskStart, duskStart + duskDurationSec, minBlueValue, blue_2_MaxIntensity);
+
+#ifdef usingDFRobot_GP8403
+      DFRobot_GP8403_1.setDACOutVoltage(BLUE_1_DAC_DFRobot, currentBlue_1_Intensity);
+      DFRobot_GP8403_1.setDACOutVoltage(BLUE_2_DAC_DFRobot, currentBlue_2_Intensity);
+#endif
+
+#ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(BLUE_1_DAC, MAX_DAC - currentBlue_1_Intensity);
       MCP12bitDAC.setChannelValue(BLUE_2_DAC, MAX_DAC - currentBlue_2_Intensity);
+#endif  
 
       if (currentBlue_1_Intensity <= minBlueValue)
       {
@@ -466,17 +586,18 @@ void LightCycles(void *parameters)
     }
 
 #ifdef debuging
+    Serial.println("while (duskStart <= curTimeSec && curTimeSec < nightTimeStart)");
     Serial.println("UNIXtime = " + String(UNIXtime));
-    Serial.print("curTimeSec = " + String(curTimeSec));
-    Serial.print("duskDurationSec = " + String(duskDurationSec));
-    Serial.print("duskStart = " + String(duskStart));
-    Serial.print("currentBlue_1_Intensity = ");
+    Serial.println("curTimeSec = " + String(curTimeSec));
+    Serial.println("duskDurationSec = " + String(duskDurationSec));
+    Serial.println("duskStart = " + String(duskStart));
+    Serial.println("currentBlue_1_Intensity = ");
     Serial.println(currentBlue_1_Intensity);
-    Serial.print("currentWhite_1_Intensity = ");
+    Serial.println("currentWhite_1_Intensity = ");
     Serial.println(currentWhite_1_Intensity);
-    Serial.print("Blue relay = ");
+    Serial.println("Blue relay = ");
     Serial.println(digitalRead(BLUE_RELAY));
-    Serial.print("White relay = ");
+    Serial.println("White relay = ");
     Serial.println(digitalRead(WHITE_RELAY));
     Serial.println("");
 #endif
@@ -488,26 +609,37 @@ void LightCycles(void *parameters)
     chkmanualOverrideSwitch();
     updateTimes();
     delay(updateLEDs);
+
+#ifdef usingDFRobot_GP8403
+    DFRobot_GP8403_1.setDACOutVoltage(WHITE_1_DAC_DFRobot, DAC_OFF); //  set the WHITE_1_DAC to 0V
+    DFRobot_GP8403_2.setDACOutVoltage(WHITE_2_DAC_DFRobot, DAC_OFF); //  set the WHITE_2_DAC to 0V
+    DFRobot_GP8403_1.setDACOutVoltage(BLUE_1_DAC_DFRobot, DAC_OFF);  //  set the BLUE_1_DAC to 0V
+    DFRobot_GP8403_2.setDACOutVoltage(BLUE_2_DAC_DFRobot, DAC_OFF);  //  set the BLUE_2_DAC to 0V
+#endif
+
+#ifdef usingAdafruit_MCP4728
     MCP12bitDAC.setChannelValue(WHITE_1_DAC, DAC_OFF);
     MCP12bitDAC.setChannelValue(WHITE_2_DAC, DAC_OFF);
     MCP12bitDAC.setChannelValue(BLUE_1_DAC, DAC_OFF);
     MCP12bitDAC.setChannelValue(BLUE_2_DAC, DAC_OFF);
+#endif
+
     digitalWrite(BLUE_RELAY, RELAY_OFF);
     digitalWrite(WHITE_RELAY, RELAY_OFF);
     {
 
 #ifdef debuging
       Serial.println("UNIXtime = " + String(UNIXtime));
-      Serial.print("curTimeSec = " + String(curTimeSec));
-      Serial.print("nightTimeDurationSec = " + String(nightTimeDurationSec));
-      Serial.print("nightTimeStart = " + String(nightTimeStart));
-      Serial.print("currentBlue_1_Intensity = ");
+      Serial.println("curTimeSec = " + String(curTimeSec));
+      Serial.println("nightTimeDurationSec = " + String(nightTimeDurationSec));
+      Serial.println("nightTimeStart = " + String(nightTimeStart));
+      Serial.println("currentBlue_1_Intensity = ");
       Serial.println(currentBlue_1_Intensity);
-      Serial.print("currentWhite_1_Intensity = ");
+      Serial.println("currentWhite_1_Intensity = ");
       Serial.println(currentWhite_1_Intensity);
-      Serial.print("Blue relay = ");
+      Serial.println("Blue relay = ");
       Serial.println(digitalRead(BLUE_RELAY));
-      Serial.print("White relay = ");
+      Serial.println("White relay = ");
       Serial.println(digitalRead(WHITE_RELAY));
       Serial.println("");
 #endif
@@ -670,6 +802,16 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
       Serial.println("High Noon duration set to " + String(data));
       break;
 
+    case NIGHT_TIME_MINUTES_MESSAGE_ID:
+      nightTimeMinutes = data;
+      Serial.println("Night Time duration set to " + String(data));
+      break;
+
+    case NIGHT_TIME_HOURS_MESSAGE_ID:
+      nightTimeHours = data;
+      Serial.println("Night Time duration set to " + String(data));
+      break;
+
     default:
       Serial.println("");
       break;
@@ -698,6 +840,9 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
     {
       delay(MessageGap);
       UNIXtime = data; // Get the UNIX time from the message
+      // struct timeval tv;
+      tv.tv_sec = UNIXtime;
+      settimeofday(&tv, NULL);
       localTimeZone = "UTC+" + String(localTimeZoneOffset);
       localTimeZone.toCharArray(buf_localTimeZone, 8);
       setenv("TZ", buf_localTimeZone, 1);
@@ -777,27 +922,83 @@ void SendLEDIntensities(void *parameters)
     }
     else
     {
-      uint16_t CurrentWhite_1_MessageID = CURRENT_WHITE_1_MESSAGE_ID;
-      uint16_t CurrentWhite_2_MessageID = CURRENT_WHITE_2_MESSAGE_ID;
-      uint16_t CurrentBlue_1_MessageID = CURRENT_BLUE_1_MESSAGE_ID;
-      uint16_t CurrentBlue_2_MessageID = CURRENT_BLUE_2_MESSAGE_ID;
-      uint64_t White_1_Intensity;
-      uint64_t White_2_Intensity;
-      uint64_t Blue_1_Intensity;
-      uint64_t Blue_2_Intensity;
-      White_1_Intensity = overrideWhite_1_Intensity;
-      White_2_Intensity = overrideWhite_2_Intensity;
-      Blue_1_Intensity = overrideBlue_1_Intensity;
-      Blue_2_Intensity = overrideBlue_2_Intensity;
-      core.sendMessage(CurrentWhite_1_MessageID, &White_1_Intensity, false); // Send the white LED intensity on the Canbus
-      delay(updateLEDs);
-      core.sendMessage(CurrentWhite_2_MessageID, &White_2_Intensity, false); // Send the white LED intensity on the Canbus
-      delay(updateLEDs);
-      core.sendMessage(CurrentBlue_1_MessageID, &Blue_1_Intensity, false); // Send the blue LED intensity on the Canbus
-      delay(updateLEDs);
-      core.sendMessage(CurrentBlue_2_MessageID, &Blue_2_Intensity, false); // Send the blue LED intensity on the Canbus
+      if ((overrideWhite_1_Intensity && overrideWhite_2_Intensity) < minWhiteValue)
+      {
+        delay(updateLEDs);
+        digitalWrite(WHITE_RELAY, RELAY_OFF);
+
+#ifdef usingDFRobot_GP8403
+        DFRobot_GP8403_1.setDACOutVoltage(WHITE_1_DAC_DFRobot, DAC_OFF);
+#endif
+
+        #ifdef usingAdafruit_MCP4728
+        MCP12bitDAC.setChannelValue(WHITE_1_DAC, DAC_OFF);
+        MCP12bitDAC.setChannelValue(WHITE_2_DAC, DAC_OFF);
+        #endif
+      }
+      else
+      {
+        delay(updateLEDs);
+        digitalWrite(WHITE_RELAY, RELAY_ON);
+
+#ifdef usingDFRobot_GP8403
+        DFRobot_GP8403_1.setDACOutVoltage(WHITE_1_DAC_DFRobot, overrideWhite_1_Intensity);
+#endif
+
+#ifdef usingAdafruit_MCP4728
+        MCP12bitDAC.setChannelValue(WHITE_1_DAC, MAX_DAC - overrideWhite_1_Intensity);
+        MCP12bitDAC.setChannelValue(WHITE_2_DAC, MAX_DAC - overrideWhite_2_Intensity);
+#endif
+      }
+      if ((overrideBlue_1_Intensity && overrideBlue_2_Intensity) < minBlueValue)
+      {
+        delay(updateLEDs);
+        digitalWrite(BLUE_RELAY, RELAY_OFF);
+
+        #ifdef usingDFRobot_GP8403
+        DFRobot_GP8403_1.setDACOutVoltage(BLUE_1_DAC_DFRobot, DAC_OFF);
+        #endif
+
+        #ifdef usingAdafruit_MCP4728
+        MCP12bitDAC.setChannelValue(BLUE_1_DAC, DAC_OFF);
+        MCP12bitDAC.setChannelValue(BLUE_2_DAC, DAC_OFF);
+        #endif
+      }
+      else
+      {
+        delay(updateLEDs);
+        digitalWrite(BLUE_RELAY, RELAY_ON);
+
+#ifdef usingDFRobot_GP8403
+        DFRobot_GP8403_1.setDACOutVoltage(BLUE_1_DAC_DFRobot, overrideBlue_1_Intensity);
+
+#endif
+
+      #ifdef usingAdafruit_MCP4728
+        MCP12bitDAC.setChannelValue(BLUE_1_DAC, MAX_DAC - overrideBlue_1_Intensity);
+        MCP12bitDAC.setChannelValue(BLUE_2_DAC, MAX_DAC - overrideBlue_2_Intensity);
+      #endif
+      }
       delay(sendMqttMessageUpdateUI);
     }
+#ifdef debuging
+    Serial.println("Manual LED control override switch is = " + String(manualOverrideSwitch));
+    Serial.println("Blue relay = " + String(digitalRead(BLUE_RELAY)));
+    Serial.println("White relay = " + String(digitalRead(WHITE_RELAY)));
+    Serial.println("overrideWhite_1_Intensity = " + String(overrideWhite_1_Intensity));
+    Serial.println("overrideWhite_2_Intensity = " + String(overrideWhite_2_Intensity));
+    Serial.println("overrideBlue_1_Intensity = " + String(overrideBlue_1_Intensity));
+    Serial.println("overrideBlue_2_Intensity = " + String(overrideBlue_2_Intensity));
+    Serial.println("currentWhite_1_Intensity = " + String(currentWhite_1_Intensity));
+    Serial.println("currentWhite_2_Intensity = " + String(currentWhite_2_Intensity));
+    Serial.println("currentBlue_1_Intensity = " + String(currentBlue_1_Intensity));
+    Serial.println("currentBlue_2_Intensity = " + String(currentBlue_2_Intensity));
+    Serial.println("currentWhite_1_Intensity_float = " + String(currentWhite_1_Intensity_float));
+    Serial.println("currentWhite_2_Intensity_float = " + String(currentWhite_2_Intensity_float));
+    Serial.println("currentBlue_1_Intensity_float = " + String(currentBlue_1_Intensity_float));
+    Serial.println("currentBlue_2_Intensity_float = " + String(currentBlue_2_Intensity_float));
+    Serial.println("");
+#endif
   }
 }
 
@@ -809,52 +1010,108 @@ void chkmanualOverrideSwitch()
     {
       digitalWrite(WHITE_RELAY, RELAY_ON);
       delay(updateLEDs);
+
+      #ifdef usingDFRobot_GP8403
+      DFRobot_GP8403_1.setDACOutVoltage(WHITE_1_DAC_DFRobot, DAC_OFF);
+      #endif
+
+    #ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(WHITE_1_DAC, DAC_OFF);
+    #endif
     }
     else
     {
       digitalWrite(WHITE_RELAY, RELAY_OFF);
       delay(updateLEDs);
+
+    #ifdef usingDFRobot_GP8403
+      DFRobot_GP8403_1.setDACOutVoltage(WHITE_1_DAC_DFRobot, overrideWhite_1_Intensity);
+    #endif
+
+    #ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(WHITE_1_DAC, MAX_DAC - overrideWhite_1_Intensity);
+    #endif
     }
 
     if (overrideWhite_2_Intensity < minWhiteValue)
     {
       digitalWrite(WHITE_RELAY, RELAY_ON);
       delay(updateLEDs);
+
+      #ifdef usingDFRobot_GP8403
+      DFRobot_GP8403_1.setDACOutVoltage(WHITE_2_DAC_DFRobot, DAC_OFF);
+      #endif
+
+    #ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(WHITE_2_DAC, DAC_OFF);
+    #endif
     }
     else
     {
       digitalWrite(WHITE_RELAY, RELAY_OFF);
       delay(updateLEDs);
+
+    #ifdef usingDFRobot_GP8403
+      DFRobot_GP8403_1.setDACOutVoltage(WHITE_2_DAC_DFRobot, overrideWhite_2_Intensity);
+      #endif
+
+    #ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(WHITE_2_DAC, MAX_DAC - overrideWhite_2_Intensity);
+    #endif
     }
 
     if (overrideBlue_1_Intensity < minBlueValue)
     {
       digitalWrite(BLUE_RELAY, RELAY_OFF);
       delay(updateLEDs);
+
+      #ifdef usingDFRobot_GP8403
+      DFRobot_GP8403_1.setDACOutVoltage(BLUE_1_DAC_DFRobot, DAC_OFF);
+      #endif
+
+    #ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(BLUE_1_DAC, DAC_OFF);
+    #endif
     }
     else
     {
       digitalWrite(BLUE_RELAY, RELAY_ON);
       delay(updateLEDs);
+
+      #ifdef usingDFRobot_GP8403
+      DFRobot_GP8403_1.setDACOutVoltage(BLUE_1_DAC_DFRobot, overrideBlue_1_Intensity);
+      #endif
+
+    #ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(BLUE_1_DAC, MAX_DAC - overrideBlue_1_Intensity);
+    #endif
     }
 
     if (overrideBlue_2_Intensity < minBlueValue)
     {
       digitalWrite(BLUE_RELAY, RELAY_OFF);
       delay(updateLEDs);
+
+      #ifdef usingDFRobot_GP8403
+      DFRobot_GP8403_1.setDACOutVoltage(BLUE_2_DAC_DFRobot, DAC_OFF);
+      #endif
+
+    #ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(BLUE_2_DAC, DAC_OFF);
+    #endif
     }
     else
     {
       digitalWrite(BLUE_RELAY, RELAY_ON);
       delay(updateLEDs);
+
+      #ifdef usingDFRobot_GP8403
+      DFRobot_GP8403_1.setDACOutVoltage(BLUE_2_DAC_DFRobot, overrideBlue_2_Intensity);
+      #endif
+
+    #ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(BLUE_2_DAC, MAX_DAC - overrideBlue_2_Intensity);
+    #endif
     }
 
 #ifdef debuging
@@ -875,6 +1132,9 @@ void updateTimes()
   while (1)
   {
     delay(MessageGap);
+    time_t UNIXtime;
+    time(&UNIXtime);
+    gettimeofday(&tv, NULL); // Get the current time from the ESP32 RTC
     localTimeZone = "UTC+" + String(localTimeZoneOffset);
     localTimeZone.toCharArray(buf_localTimeZone, 8);
     setenv("TZ", buf_localTimeZone, 1);
@@ -898,6 +1158,7 @@ void updateTimes()
 #ifdef debuging
     Serial.println("Running updateTimes function");
     Serial.println("UNIXtime = " + String(UNIXtime));
+    Serial.println("localTimeZone = " + String(localTimeZone));
     Serial.println("localTime = " + String(localTime));
     Serial.println("24 hour time = " + String(timeinfo.tm_year) + "," + String(timeinfo.tm_mon) + " " + String(timeinfo.tm_wday) + " " + String(timeinfo.tm_hour) + ":" + String(timeinfo.tm_min) + ":" + String(timeinfo.tm_sec));
     Serial.println("curTimeSec in seconds  = " + String(curTimeSec));
