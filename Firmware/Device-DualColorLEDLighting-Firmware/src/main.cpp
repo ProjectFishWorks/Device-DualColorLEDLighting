@@ -10,8 +10,9 @@
 #define debugingTime // comment out to remove time debuging
 
 // #define usingAdafruit_MCP4728
-#define usingDFRobot_GP8403
+// #define usingDFRobot_GP8403
 // #define using_2X_DFRobot_GP8403
+#define usingPWM_to_0to10V
 
 //  RELAY logic, change if inverted logic
 #define RELAY_ON 1
@@ -34,6 +35,23 @@ int DAC_OFF = 0;                              // value to turn off the DAC outpu
 Adafruit_MCP4728 MCP12bitDAC; //  create the MCP4728 object 12 bits of resolution = 4096 steps, so MAX_DAC = 4095
 int MAX_DAC = 4095;           //  this can be changed if there is a different resolution than 12bit
 int DAC_OFF = MAX_DAC;        //  change this to 0 if the DAC is not inverted
+#endif
+
+#ifdef usingPWM_to_0to10V
+// PWM to 0-10V variables
+#define WHITE_1_PWM_PIN 4 // PWM pin for WHITE_1
+#define WHITE_2_PWM_PIN 5 // PWM pin for WHITE_2
+#define BLUE_1_PWM_PIN 6  // PWM pin for BLUE_1
+#define BLUE_2_PWM_PIN 7  // PWM pin for BLUE_2
+
+#define PWM_FREQUENCY 500     // PWM frequency IN HZ
+#define PWM_RESOLUTION 8      // PWM resolution in bits
+int MAX_DAC = PWM_RESOLUTION; // maximum PWM value based on resolution
+
+#define WHITE_CHANNEL_1 0
+#define WHITE_CHANNEL_2 1
+#define BLUE_CHANNEL_1 2
+#define BLUE_CHANNEL_2 3
 #endif
 
 // USE int FOR I2C PIN DEFINITIONS
@@ -161,6 +179,9 @@ NodeControllerCore core;
 // Callback function for received messages from the CAN bus
 void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data);
 
+// Function to set the PWM value for a given channel
+void setPWM(int channel, int value);
+
 // Function to send LED intensities to the App
 void SendLEDIntensities(void *parameters);
 
@@ -191,8 +212,25 @@ void setup()
   Serial.println("Initializing I2C Communication");
   Serial.println("");
 
-  //  Initialize the LEDC channel
-  ledcSetup(0, 5000, 12); //  setup the LEDC channel 0 with a frequency of 5000Hz and 12 bit resolution
+#ifdef usingPWM_to_0to10V
+  //  Initialize the LEDC channelS for PWM to 0-10V
+  ledcSetup(WHITE_CHANNEL_1, PWM_FREQUENCY, PWM_RESOLUTION); //  setup WHITE_CHANNEL_1
+  ledcSetup(WHITE_CHANNEL_2, PWM_FREQUENCY, PWM_RESOLUTION); //  setup WHITE_CHANNEL_2
+  ledcSetup(BLUE_CHANNEL_1, PWM_FREQUENCY, PWM_RESOLUTION);  //  setup BLUE_CHANNEL_1
+  ledcSetup(BLUE_CHANNEL_2, PWM_FREQUENCY, PWM_RESOLUTION);  //  setup BLUE_CHANNEL_2
+
+  //  Attach the LEDC channels to the PWM pins
+  ledcAttachPin(WHITE_1_PWM_PIN, WHITE_CHANNEL_1); //  attach WHITE_1_PWM_PIN to WHITE_CHANNEL_1
+  ledcAttachPin(WHITE_2_PWM_PIN, WHITE_CHANNEL_2); //  attach WHITE_2_PWM_PIN to WHITE_CHANNEL_2
+  ledcAttachPin(BLUE_1_PWM_PIN, BLUE_CHANNEL_1);   //  attach BLUE_1_PWM_PIN to BLUE_CHANNEL_1
+  ledcAttachPin(BLUE_2_PWM_PIN, BLUE_CHANNEL_2);   //  attach BLUE_2_PWM_PIN to BLUE_CHANNEL_2
+
+  //  Set all PWM channels to 0 (off)
+  setPWM(WHITE_CHANNEL_1, 0);
+  setPWM(WHITE_CHANNEL_2, 0);
+  setPWM(BLUE_CHANNEL_1, 0);
+  setPWM(BLUE_CHANNEL_2, 0);
+#endif
 
 #ifdef usingDFRobot_GP8403
   //  Initialize the DAC
@@ -357,6 +395,15 @@ void LightCycles(void *parameters)
     MCP12bitDAC.setChannelValue(BLUE_1_DAC, DAC_OFF);  //  set the BLUE_1_DAC to DAC_OFF
     MCP12bitDAC.setChannelValue(BLUE_2_DAC, DAC_OFF);  //  set the BLUE_2_DAC to DAC_OFF
 #endif
+
+#ifdef usingPWM_to_0to10V
+    // Turn off all PWM channels
+    setPWM(WHITE_CHANNEL_1, 0);
+    setPWM(WHITE_CHANNEL_2, 0);
+    setPWM(BLUE_CHANNEL_1, 0);
+    setPWM(BLUE_CHANNEL_2, 0);
+#endif
+
     digitalWrite(BLUE_RELAY, RELAY_OFF);  // turn off the blue relay
     digitalWrite(WHITE_RELAY, RELAY_OFF); // turn off the white relay
 
@@ -377,13 +424,19 @@ void LightCycles(void *parameters)
       currentBlue_2_Intensity = map(curTimeSec, dawnStart, dawnStart + dawnDurationSec, 0, blue_2_MaxIntensity); //  map the current time to the start time and the duration of the dawnDurationSec
 
 #ifdef usingDFRobot_GP8403
-      DFRobot_GP8403_1.setDACOutVoltage(BLUE_1_DAC_DFRobot, currentBlue_1_Intensity);   //  set the BLUE_1_DAC to the mapped intensity
-      DFRobot_GP8403_2.setDACOutVoltage(BLUE_2_DAC_DFRobot, currentBlue_2_Intensity);   //  set the BLUE_2_DAC to the mapped intensity
+      DFRobot_GP8403_1.setDACOutVoltage(BLUE_1_DAC_DFRobot, currentBlue_1_Intensity); //  set the BLUE_1_DAC to the mapped intensity
+      DFRobot_GP8403_2.setDACOutVoltage(BLUE_2_DAC_DFRobot, currentBlue_2_Intensity); //  set the BLUE_2_DAC to the mapped intensity
 #endif
 
 #ifdef usingAdafruit_MCP4728
-      MCP12bitDAC.setChannelValue(BLUE_1_DAC, MAX_DAC - currentBlue_1_Intensity);       //  set the BLUE_1_DAC to the mapped intensity
-      MCP12bitDAC.setChannelValue(BLUE_2_DAC, MAX_DAC - currentBlue_2_Intensity);       //  set the BLUE_2_DAC to the mapped intensity
+      MCP12bitDAC.setChannelValue(BLUE_1_DAC, MAX_DAC - currentBlue_1_Intensity); //  set the BLUE_1_DAC to the mapped intensity
+      MCP12bitDAC.setChannelValue(BLUE_2_DAC, MAX_DAC - currentBlue_2_Intensity); //  set the BLUE_2_DAC to the mapped intensity
+#endif
+
+#ifdef usingPWM_to_0to10V
+      // Set the PWM value for each channel
+      setPWM(BLUE_CHANNEL_1, currentBlue_1_Intensity);
+      setPWM(BLUE_CHANNEL_2, currentBlue_2_Intensity);
 #endif
 
       if (currentBlue_1_Intensity <= minBlueValue)
@@ -423,19 +476,26 @@ void LightCycles(void *parameters)
       currentWhite_1_Intensity = map(curTimeSec, sunriseStart, sunriseStart + sunriseDurationSec, minBlueValue, white_1_MaxIntensity);
       currentWhite_2_Intensity = map(curTimeSec, sunriseStart, sunriseStart + sunriseDurationSec, minBlueValue, white_2_MaxIntensity);
 
-      #ifdef usingDFRobot_GP8403
+#ifdef usingDFRobot_GP8403
       DFRobot_GP8403_1.setDACOutVoltage(BLUE_1_DAC_DFRobot, currentBlue_1_Intensity);
       DFRobot_GP8403_1.setDACOutVoltage(BLUE_2_DAC_DFRobot, currentBlue_2_Intensity);
       DFRobot_GP8403_1.setDACOutVoltage(WHITE_1_DAC_DFRobot, currentWhite_1_Intensity);
       DFRobot_GP8403_1.setDACOutVoltage(WHITE_2_DAC_DFRobot, currentWhite_2_Intensity);
-      #endif
+#endif
 
-      #ifdef usingAdafruit_MCP4728
+#ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(BLUE_1_DAC, MAX_DAC - currentBlue_1_Intensity);
       MCP12bitDAC.setChannelValue(BLUE_2_DAC, MAX_DAC - currentBlue_2_Intensity);
       MCP12bitDAC.setChannelValue(WHITE_1_DAC, MAX_DAC - currentWhite_1_Intensity);
       MCP12bitDAC.setChannelValue(WHITE_2_DAC, MAX_DAC - currentWhite_2_Intensity);
-      #endif
+#endif
+
+#ifdef usingPWM_to_0to10V
+      setPWM(BLUE_CHANNEL_1, currentBlue_1_Intensity);
+      setPWM(BLUE_CHANNEL_2, currentBlue_2_Intensity);
+      setPWM(WHITE_CHANNEL_1, currentWhite_1_Intensity);
+      setPWM(WHITE_CHANNEL_2, currentWhite_2_Intensity);
+#endif
 
       if (currentWhite_1_Intensity <= minWhiteValue)
       {
@@ -474,19 +534,26 @@ void LightCycles(void *parameters)
       currentWhite_1_Intensity = white_1_MaxIntensity;
       currentWhite_2_Intensity = white_2_MaxIntensity;
 
-      #ifdef usingDFRobot_GP8403
+#ifdef usingDFRobot_GP8403
       DFRobot_GP8403_1.setDACOutVoltage(BLUE_1_DAC_DFRobot, currentBlue_1_Intensity);
       DFRobot_GP8403_1.setDACOutVoltage(BLUE_2_DAC_DFRobot, currentBlue_2_Intensity);
       DFRobot_GP8403_1.setDACOutVoltage(WHITE_1_DAC_DFRobot, currentWhite_1_Intensity);
       DFRobot_GP8403_1.setDACOutVoltage(WHITE_2_DAC_DFRobot, currentWhite_2_Intensity);
-      #endif
+#endif
 
-      #ifdef usingAdafruit_MCP4728
+#ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(BLUE_1_DAC, MAX_DAC - currentBlue_1_Intensity);
       MCP12bitDAC.setChannelValue(BLUE_2_DAC, MAX_DAC - currentBlue_2_Intensity);
       MCP12bitDAC.setChannelValue(WHITE_1_DAC, MAX_DAC - currentWhite_1_Intensity);
       MCP12bitDAC.setChannelValue(WHITE_2_DAC, MAX_DAC - currentWhite_2_Intensity);
-      #endif
+#endif
+
+#ifdef usingPWM_to_0to10V
+      setPWM(BLUE_CHANNEL_1, currentBlue_1_Intensity);
+      setPWM(BLUE_CHANNEL_2, currentBlue_2_Intensity);
+      setPWM(WHITE_CHANNEL_1, currentWhite_1_Intensity);
+      setPWM(WHITE_CHANNEL_2, currentWhite_2_Intensity);
+#endif
 
 #ifdef debuging
       Serial.println("while (curTimeSec >= highNoonStart && curTimeSec < sunriseStart)");
@@ -515,19 +582,26 @@ void LightCycles(void *parameters)
       currentWhite_1_Intensity = map(curTimeSec, sunsetStart, sunsetStart + sunsetDurationSec, white_1_MaxIntensity, minWhiteValue);
       currentWhite_2_Intensity = map(curTimeSec, sunsetStart, sunsetStart + sunsetDurationSec, white_2_MaxIntensity, minWhiteValue);
 
-      #ifdef usingDFRobot_GP8403
+#ifdef usingDFRobot_GP8403
       DFRobot_GP8403_1.setDACOutVoltage(BLUE_1_DAC_DFRobot, currentBlue_1_Intensity);
       DFRobot_GP8403_1.setDACOutVoltage(BLUE_2_DAC_DFRobot, currentBlue_2_Intensity);
       DFRobot_GP8403_1.setDACOutVoltage(WHITE_1_DAC_DFRobot, currentWhite_1_Intensity);
       DFRobot_GP8403_1.setDACOutVoltage(WHITE_2_DAC_DFRobot, currentWhite_2_Intensity);
-      #endif
+#endif
 
-      #ifdef usingAdafruit_MCP4728
+#ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(BLUE_1_DAC, MAX_DAC - currentBlue_1_Intensity);
       MCP12bitDAC.setChannelValue(BLUE_2_DAC, MAX_DAC - currentBlue_2_Intensity);
       MCP12bitDAC.setChannelValue(WHITE_1_DAC, MAX_DAC - currentWhite_1_Intensity);
       MCP12bitDAC.setChannelValue(WHITE_2_DAC, MAX_DAC - currentWhite_2_Intensity);
-      #endif
+#endif
+
+#ifdef usingPWM_to_0to10V
+      setPWM(BLUE_CHANNEL_1, currentBlue_1_Intensity);
+      setPWM(BLUE_CHANNEL_2, currentBlue_2_Intensity);
+      setPWM(WHITE_CHANNEL_1, currentWhite_1_Intensity);
+      setPWM(WHITE_CHANNEL_2, currentWhite_2_Intensity);
+#endif
 
       if (currentWhite_1_Intensity <= minWhiteValue)
       {
@@ -572,7 +646,12 @@ void LightCycles(void *parameters)
 #ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(BLUE_1_DAC, MAX_DAC - currentBlue_1_Intensity);
       MCP12bitDAC.setChannelValue(BLUE_2_DAC, MAX_DAC - currentBlue_2_Intensity);
-#endif  
+#endif
+
+#ifdef usingPWM_to_0to10V
+      setPWM(BLUE_CHANNEL_1, currentBlue_1_Intensity);
+      setPWM(BLUE_CHANNEL_2, currentBlue_2_Intensity);
+#endif
 
       if (currentBlue_1_Intensity <= minBlueValue)
       {
@@ -624,6 +703,13 @@ void LightCycles(void *parameters)
     MCP12bitDAC.setChannelValue(BLUE_2_DAC, DAC_OFF);
 #endif
 
+#ifdef usingPWM_to_0to10V
+    setPWM(WHITE_CHANNEL_1, 0);
+    setPWM(WHITE_CHANNEL_2, 0);
+    setPWM(BLUE_CHANNEL_1, 0);
+    setPWM(BLUE_CHANNEL_2, 0);
+#endif
+
     digitalWrite(BLUE_RELAY, RELAY_OFF);
     digitalWrite(WHITE_RELAY, RELAY_OFF);
     {
@@ -648,6 +734,12 @@ void LightCycles(void *parameters)
 }
 
 ///////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+// Function to set the PWM value for a given channel
+void setPWM(int channel, int value)
+{
+  ledcWrite(channel, value); // value: 0–255 for 8-bit
+}
 
 // Callback function for received messages from the CAN bus
 void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
@@ -931,10 +1023,10 @@ void SendLEDIntensities(void *parameters)
         DFRobot_GP8403_1.setDACOutVoltage(WHITE_1_DAC_DFRobot, DAC_OFF);
 #endif
 
-        #ifdef usingAdafruit_MCP4728
+#ifdef usingAdafruit_MCP4728
         MCP12bitDAC.setChannelValue(WHITE_1_DAC, DAC_OFF);
         MCP12bitDAC.setChannelValue(WHITE_2_DAC, DAC_OFF);
-        #endif
+#endif
       }
       else
       {
@@ -955,14 +1047,14 @@ void SendLEDIntensities(void *parameters)
         delay(updateLEDs);
         digitalWrite(BLUE_RELAY, RELAY_OFF);
 
-        #ifdef usingDFRobot_GP8403
+#ifdef usingDFRobot_GP8403
         DFRobot_GP8403_1.setDACOutVoltage(BLUE_1_DAC_DFRobot, DAC_OFF);
-        #endif
+#endif
 
-        #ifdef usingAdafruit_MCP4728
+#ifdef usingAdafruit_MCP4728
         MCP12bitDAC.setChannelValue(BLUE_1_DAC, DAC_OFF);
         MCP12bitDAC.setChannelValue(BLUE_2_DAC, DAC_OFF);
-        #endif
+#endif
       }
       else
       {
@@ -974,10 +1066,10 @@ void SendLEDIntensities(void *parameters)
 
 #endif
 
-      #ifdef usingAdafruit_MCP4728
+#ifdef usingAdafruit_MCP4728
         MCP12bitDAC.setChannelValue(BLUE_1_DAC, MAX_DAC - overrideBlue_1_Intensity);
         MCP12bitDAC.setChannelValue(BLUE_2_DAC, MAX_DAC - overrideBlue_2_Intensity);
-      #endif
+#endif
       }
       delay(sendMqttMessageUpdateUI);
     }
@@ -1011,26 +1103,26 @@ void chkmanualOverrideSwitch()
       digitalWrite(WHITE_RELAY, RELAY_ON);
       delay(updateLEDs);
 
-      #ifdef usingDFRobot_GP8403
+#ifdef usingDFRobot_GP8403
       DFRobot_GP8403_1.setDACOutVoltage(WHITE_1_DAC_DFRobot, DAC_OFF);
-      #endif
+#endif
 
-    #ifdef usingAdafruit_MCP4728
+#ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(WHITE_1_DAC, DAC_OFF);
-    #endif
+#endif
     }
     else
     {
       digitalWrite(WHITE_RELAY, RELAY_OFF);
       delay(updateLEDs);
 
-    #ifdef usingDFRobot_GP8403
+#ifdef usingDFRobot_GP8403
       DFRobot_GP8403_1.setDACOutVoltage(WHITE_1_DAC_DFRobot, overrideWhite_1_Intensity);
-    #endif
+#endif
 
-    #ifdef usingAdafruit_MCP4728
+#ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(WHITE_1_DAC, MAX_DAC - overrideWhite_1_Intensity);
-    #endif
+#endif
     }
 
     if (overrideWhite_2_Intensity < minWhiteValue)
@@ -1038,26 +1130,26 @@ void chkmanualOverrideSwitch()
       digitalWrite(WHITE_RELAY, RELAY_ON);
       delay(updateLEDs);
 
-      #ifdef usingDFRobot_GP8403
+#ifdef usingDFRobot_GP8403
       DFRobot_GP8403_1.setDACOutVoltage(WHITE_2_DAC_DFRobot, DAC_OFF);
-      #endif
+#endif
 
-    #ifdef usingAdafruit_MCP4728
+#ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(WHITE_2_DAC, DAC_OFF);
-    #endif
+#endif
     }
     else
     {
       digitalWrite(WHITE_RELAY, RELAY_OFF);
       delay(updateLEDs);
 
-    #ifdef usingDFRobot_GP8403
+#ifdef usingDFRobot_GP8403
       DFRobot_GP8403_1.setDACOutVoltage(WHITE_2_DAC_DFRobot, overrideWhite_2_Intensity);
-      #endif
+#endif
 
-    #ifdef usingAdafruit_MCP4728
+#ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(WHITE_2_DAC, MAX_DAC - overrideWhite_2_Intensity);
-    #endif
+#endif
     }
 
     if (overrideBlue_1_Intensity < minBlueValue)
@@ -1065,26 +1157,26 @@ void chkmanualOverrideSwitch()
       digitalWrite(BLUE_RELAY, RELAY_OFF);
       delay(updateLEDs);
 
-      #ifdef usingDFRobot_GP8403
+#ifdef usingDFRobot_GP8403
       DFRobot_GP8403_1.setDACOutVoltage(BLUE_1_DAC_DFRobot, DAC_OFF);
-      #endif
+#endif
 
-    #ifdef usingAdafruit_MCP4728
+#ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(BLUE_1_DAC, DAC_OFF);
-    #endif
+#endif
     }
     else
     {
       digitalWrite(BLUE_RELAY, RELAY_ON);
       delay(updateLEDs);
 
-      #ifdef usingDFRobot_GP8403
+#ifdef usingDFRobot_GP8403
       DFRobot_GP8403_1.setDACOutVoltage(BLUE_1_DAC_DFRobot, overrideBlue_1_Intensity);
-      #endif
+#endif
 
-    #ifdef usingAdafruit_MCP4728
+#ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(BLUE_1_DAC, MAX_DAC - overrideBlue_1_Intensity);
-    #endif
+#endif
     }
 
     if (overrideBlue_2_Intensity < minBlueValue)
@@ -1092,26 +1184,26 @@ void chkmanualOverrideSwitch()
       digitalWrite(BLUE_RELAY, RELAY_OFF);
       delay(updateLEDs);
 
-      #ifdef usingDFRobot_GP8403
+#ifdef usingDFRobot_GP8403
       DFRobot_GP8403_1.setDACOutVoltage(BLUE_2_DAC_DFRobot, DAC_OFF);
-      #endif
+#endif
 
-    #ifdef usingAdafruit_MCP4728
+#ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(BLUE_2_DAC, DAC_OFF);
-    #endif
+#endif
     }
     else
     {
       digitalWrite(BLUE_RELAY, RELAY_ON);
       delay(updateLEDs);
 
-      #ifdef usingDFRobot_GP8403
+#ifdef usingDFRobot_GP8403
       DFRobot_GP8403_1.setDACOutVoltage(BLUE_2_DAC_DFRobot, overrideBlue_2_Intensity);
-      #endif
+#endif
 
-    #ifdef usingAdafruit_MCP4728
+#ifdef usingAdafruit_MCP4728
       MCP12bitDAC.setChannelValue(BLUE_2_DAC, MAX_DAC - overrideBlue_2_Intensity);
-    #endif
+#endif
     }
 
 #ifdef debuging
