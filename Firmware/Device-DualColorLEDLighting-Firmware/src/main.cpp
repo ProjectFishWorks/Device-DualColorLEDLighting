@@ -39,10 +39,10 @@ int DAC_OFF = MAX_DAC;        //  change this to 0 if the DAC is not inverted
 
 #ifdef usingPWM_to_0to10V
 // PWM to 0-10V variables
-#define WHITE_1_PWM_PIN 4 // PWM pin for WHITE_1
-#define WHITE_2_PWM_PIN 5 // PWM pin for WHITE_2
-#define BLUE_1_PWM_PIN 6  // PWM pin for BLUE_1
-#define BLUE_2_PWM_PIN 7  // PWM pin for BLUE_2
+#define WHITE_1_PWM_PIN 0 // PWM pin for WHITE_1
+#define WHITE_2_PWM_PIN 1 // PWM pin for WHITE_2
+#define BLUE_1_PWM_PIN 2 // PWM pin for BLUE_1
+#define BLUE_2_PWM_PIN 3  // PWM pin for BLUE_2
 
 #define PWM_FREQUENCY 500     // PWM frequency IN HZ
 #define PWM_RESOLUTION 8      // PWM resolution in bits
