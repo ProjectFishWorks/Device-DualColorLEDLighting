@@ -6,6 +6,9 @@
 #include <Adafruit_MCP4728.h>
 #include "DFRobot_GP8403.h"
 
+// Initial UNIX time for testing Jan 1, 2026 10:09:00 PM UTC
+#define TimeSet 1767305485
+//--------------------------------------------- put #define statements here: ----------------------------------------------------
 #define debuging
 #define debugingTime // comment out to remove time debuging
 
@@ -65,40 +68,40 @@ int I2C_SCL = 3;
 #define UNIX_TIME_MESSAGE_ID 2000                   // 2000
 #define UPDATE_TIMEZONE_OFFSET_MESSAGE_ID 2001      // 2001
 #define DAWN_MINUTES_MESSAGE_ID 25060               // 0xA00
-uint64_t dawnMinutes = 30;                               // variable to store the dawn minutes message data
+uint64_t dawnMinutes = 30;                          // variable to store the dawn minutes message data
 #define DAWN_HOURS_MESSAGE_ID 25061                 // 0xA01
-uint64_t dawnHours = 2;                                 // variable to store the dawn hours message data
+uint64_t dawnHours = 9;                             // variable to store the dawn hours message data
 #define DUSK_MINUTES_MESSAGE_ID 25062               // 0xA02
-uint64_t duskMinutes = 30;                               // variable to store the dusk minutes message data
+uint64_t duskMinutes = 30;                          // variable to store the dusk minutes message data
 #define DUSK_HOURS_MESSAGE_ID 25063                 // 0xA03
-uint64_t duskHours = 21;                                 // variable to store the dusk hours message data
+uint64_t duskHours = 21;                            // variable to store the dusk hours message data
 #define SUNRISE_MINUTES_MESSAGE_ID 25064            // 0xA04
 uint64_t sunriseMinutes;                            // variable to store the sunrise minutes message data
 #define SUNRISE_HOURS_MESSAGE_ID 25065              // 0xA05
-uint64_t sunriseHours = 11;                              // variable to store the sunrise hours message data
+uint64_t sunriseHours = 11;                         // variable to store the sunrise hours message data
 #define SUNSET_MINUTES_MESSAGE_ID 25066             // 0xA06
 uint64_t sunsetMinutes;                             // variable to store the sunset minutes message data
 #define SUNSET_HOURS_MESSAGE_ID 25067               // 0xA07
-uint64_t sunsetHours = 19;                               // variable to store the sunset hours message data
+uint64_t sunsetHours = 19;                          // variable to store the sunset hours message data
 #define HIGH_NOON_MINUTES_MESSAGE_ID 25068          // 0xA08
 uint64_t highNoonMinutes;                           // variable to store the high noon minutes message data
 #define HIGH_NOON_HOURS_MESSAGE_ID 25069            // 0xA09
-uint64_t highNoonHours = 13;                             // variable to store the high noon hours message data
+uint64_t highNoonHours = 13;                        // variable to store the high noon hours message data
 #define NIGHT_TIME_MINUTES_MESSAGE_ID 25070         // 0xA0A
-uint64_t nightTimeMinutes = 50;                          // variable to store the night time minutes message data
+uint64_t nightTimeMinutes = 30;                     // variable to store the night time minutes message data
 #define NIGHT_TIME_HOURS_MESSAGE_ID 25071           // 0xA0B
-uint64_t nightTimeHours = 22;                            // variable to store the night time hours message data
+uint64_t nightTimeHours = 22;                       // variable to store the night time hours message data
 #define BLUE_1_MAX_INTENSITY_MESSAGE_ID 25072       // 0xA0C
-uint64_t blue_1_MaxIntensity  = 75;                       // variable to store the blue_1 max intensity message data
+uint64_t blue_1_MaxIntensity = 75;                  // variable to store the blue_1 max intensity message data
 float blue_1_MaxIntensity_float;                    // variable to store the blue_1 max intensity message data
 #define BLUE_2_MAX_INTENSITY_MESSAGE_ID 25073       // 0xA0D
-uint64_t blue_2_MaxIntensity = 75;                       // variable to store the blue_2 max intensity message data
+uint64_t blue_2_MaxIntensity = 75;                  // variable to store the blue_2 max intensity message data
 float blue_2_MaxIntensity_float;                    // variable to store the blue_2 max intensity message data
 #define WHITE_1_MAX_INTENSITY_MESSAGE_ID 25074      // 0xA0E
-uint64_t white_1_MaxIntensity = 75;                      // variable to store the white_1 max intensity message data
+uint64_t white_1_MaxIntensity = 75;                 // variable to store the white_1 max intensity message data
 float white_1_MaxIntensity_float;                   // variable to store the white_1 max intensity message data
 #define WHITE_2_MAX_INTENSITY_MESSAGE_ID 25075      // 0xA0F
-uint64_t white_2_MaxIntensity = 75;                      // variable to store the white_2 max intensity message data
+uint64_t white_2_MaxIntensity = 75;                 // variable to store the white_2 max intensity message data
 float white_2_MaxIntensity_float;                   // variable to store the white_2 max intensity message data
 #define CURRENT_WHITE_1_MESSAGE_ID 25076            // 0xA10
 uint64_t currentWhite_1_Intensity;                  // variable to store the current white_1 intensity message data
@@ -127,10 +130,10 @@ float overrideBlue_1_Intensity_float;               // variable to store the ove
 uint64_t overrideBlue_2_Intensity;                  // variable to store the override blue_2 intensity message data
 float overrideBlue_2_Intensity_float;               // variable to store the override blue_2 intensity message data
 #define MIN_WHITE_VALUE_MESSAGE_ID 25085            // 0xA19
-u_int64_t minWhiteValue = 0;                            // variable to store the min white value message data
+u_int64_t minWhiteValue = 0;                        // variable to store the min white value message data
 float minWhiteValue_float;                          // variable to store the min white value message data
 #define MIN_BLUE_VALUE_MESSAGE_ID 25086             // 0xA1A
-uint64_t minBlueValue = 0;                              // variable to store the min blue value message data
+uint64_t minBlueValue = 0;                          // variable to store the min blue value message data
 float minBlueValue_float;                           // variable to store the min blue value message data
 
 #ifdef usingAdafruit_MCP4728
@@ -156,9 +159,7 @@ int localTimeZoneOffset = 8; // Timezone offset
 char buf_localTimeZone[8];   // Char array Buffer for timezone string
 struct tm timeinfo;          // Time structure
 struct timeval tv;           // Time value structure
-//time_t UNIXtime;             // UNIX time
-// Initial UNIX time for testing Jan 1, 2026 3:16:00 AM UTC
-time_t UNIXtime = 1767406560; // UNIX time
+time_t UNIXtime;             // UNIX time
 int curTimeSec;              //  get the start time in seconds since midnight
 int dawnStart;               //  start time of dawn in seconds since midnight
 int sunriseStart;            //  start time of sunrise in seconds since midnight
@@ -207,8 +208,11 @@ void setup()
   Serial.println("");
 
   // Initialize the time keeping
-  struct tm timeinfo;
-  getLocalTime(&timeinfo);
+
+  tv.tv_sec = TimeSet; // Set the time in seconds since epoch
+
+  settimeofday(&tv, NULL);
+  // getLocalTime(&timeinfo);
 
   // Initialize the OneWire communication
   Wire.begin(I2C_SDA, I2C_SCL);
@@ -421,9 +425,9 @@ void LightCycles(void *parameters)
     while (curTimeSec >= dawnStart && curTimeSec < sunriseStart) // check if the current time is between dawnStart and sunriseStart
     {
       delay(updateLEDs);
-      chkmanualOverrideSwitch();                                                                                  //  check if the manual override switch is on
-     currentBlue_1_Intensity = map(curTimeSec, dawnStart, dawnStart + dawnDurationSec, 0, blue_1_MaxIntensity);  //  map the current time to the start time and the duration of the dawnDurationSec
-      currentBlue_2_Intensity = map(curTimeSec, dawnStart, dawnStart + dawnDurationSec, 0, blue_2_MaxIntensity);  //  map the current time to the start time and the duration of the dawnDurationSec
+      chkmanualOverrideSwitch();                                                                                 //  check if the manual override switch is on
+      currentBlue_1_Intensity = map(curTimeSec, dawnStart, dawnStart + dawnDurationSec, 0, blue_1_MaxIntensity); //  map the current time to the start time and the duration of the dawnDurationSec
+      currentBlue_2_Intensity = map(curTimeSec, dawnStart, dawnStart + dawnDurationSec, 0, blue_2_MaxIntensity); //  map the current time to the start time and the duration of the dawnDurationSec
 
 #ifdef usingDFRobot_GP8403
       DFRobot_GP8403_1.setDACOutVoltage(BLUE_1_DAC_DFRobot, currentBlue_1_Intensity); //  set the BLUE_1_DAC to the mapped intensity
@@ -464,7 +468,7 @@ void LightCycles(void *parameters)
       Serial.println("White relay = " + String(digitalRead(WHITE_RELAY)));
       Serial.println("");
 #endif
- updateTimes();
+      updateTimes();
     }
 
     //----------------------------------- "Sunrise" Fade blue and white to highNoon  --------------------------------------------------
@@ -666,53 +670,53 @@ void LightCycles(void *parameters)
       }
 
 #ifdef debuging
-    Serial.println("while (duskStart <= curTimeSec && curTimeSec < nightTimeStart)");
-    Serial.println("UNIXtime = " + String(UNIXtime));
-    Serial.println("curTimeSec = " + String(curTimeSec));
-    Serial.println("duskDurationSec = " + String(duskDurationSec));
-    Serial.println("duskStart = " + String(duskStart));
-    Serial.println("currentBlue_1_Intensity = ");
-    Serial.println(currentBlue_1_Intensity);
-    Serial.println("currentWhite_1_Intensity = ");
-    Serial.println(currentWhite_1_Intensity);
-    Serial.println("Blue relay = ");
-    Serial.println(digitalRead(BLUE_RELAY));
-    Serial.println("White relay = ");
-    Serial.println(digitalRead(WHITE_RELAY));
-    Serial.println("");
+      Serial.println("while (duskStart <= curTimeSec && curTimeSec < nightTimeStart)");
+      Serial.println("UNIXtime = " + String(UNIXtime));
+      Serial.println("curTimeSec = " + String(curTimeSec));
+      Serial.println("duskDurationSec = " + String(duskDurationSec));
+      Serial.println("duskStart = " + String(duskStart));
+      Serial.println("currentBlue_1_Intensity = ");
+      Serial.println(currentBlue_1_Intensity);
+      Serial.println("currentWhite_1_Intensity = ");
+      Serial.println(currentWhite_1_Intensity);
+      Serial.println("Blue relay = ");
+      Serial.println(digitalRead(BLUE_RELAY));
+      Serial.println("White relay = ");
+      Serial.println(digitalRead(WHITE_RELAY));
+      Serial.println("");
 #endif
       updateTimes();
-  }
-  //------------------------------------------------------- nightTime -----------------------------------------------------------------------
+    }
+    //------------------------------------------------------- nightTime -----------------------------------------------------------------------
 
-  while (curTimeSec >= nightTimeStart || curTimeSec < dawnStart)
-  {
-    chkmanualOverrideSwitch();
-    delay(updateLEDs);
+    while (curTimeSec >= nightTimeStart || curTimeSec < dawnStart)
+    {
+      chkmanualOverrideSwitch();
+      delay(updateLEDs);
 
 #ifdef usingDFRobot_GP8403
-    DFRobot_GP8403_1.setDACOutVoltage(WHITE_1_DAC_DFRobot, DAC_OFF); //  set the WHITE_1_DAC to 0V
-    DFRobot_GP8403_2.setDACOutVoltage(WHITE_2_DAC_DFRobot, DAC_OFF); //  set the WHITE_2_DAC to 0V
-    DFRobot_GP8403_1.setDACOutVoltage(BLUE_1_DAC_DFRobot, DAC_OFF);  //  set the BLUE_1_DAC to 0V
-    DFRobot_GP8403_2.setDACOutVoltage(BLUE_2_DAC_DFRobot, DAC_OFF);  //  set the BLUE_2_DAC to 0V
+      DFRobot_GP8403_1.setDACOutVoltage(WHITE_1_DAC_DFRobot, DAC_OFF); //  set the WHITE_1_DAC to 0V
+      DFRobot_GP8403_2.setDACOutVoltage(WHITE_2_DAC_DFRobot, DAC_OFF); //  set the WHITE_2_DAC to 0V
+      DFRobot_GP8403_1.setDACOutVoltage(BLUE_1_DAC_DFRobot, DAC_OFF);  //  set the BLUE_1_DAC to 0V
+      DFRobot_GP8403_2.setDACOutVoltage(BLUE_2_DAC_DFRobot, DAC_OFF);  //  set the BLUE_2_DAC to 0V
 #endif
 
 #ifdef usingAdafruit_MCP4728
-    MCP12bitDAC.setChannelValue(WHITE_1_DAC, DAC_OFF);
-    MCP12bitDAC.setChannelValue(WHITE_2_DAC, DAC_OFF);
-    MCP12bitDAC.setChannelValue(BLUE_1_DAC, DAC_OFF);
-    MCP12bitDAC.setChannelValue(BLUE_2_DAC, DAC_OFF);
+      MCP12bitDAC.setChannelValue(WHITE_1_DAC, DAC_OFF);
+      MCP12bitDAC.setChannelValue(WHITE_2_DAC, DAC_OFF);
+      MCP12bitDAC.setChannelValue(BLUE_1_DAC, DAC_OFF);
+      MCP12bitDAC.setChannelValue(BLUE_2_DAC, DAC_OFF);
 #endif
 
 #ifdef usingPWM_to_0to10V
-    setPWM(WHITE_CHANNEL_1, 0);
-    setPWM(WHITE_CHANNEL_2, 0);
-    setPWM(BLUE_CHANNEL_1, 0);
-    setPWM(BLUE_CHANNEL_2, 0);
+      setPWM(WHITE_CHANNEL_1, 0);
+      setPWM(WHITE_CHANNEL_2, 0);
+      setPWM(BLUE_CHANNEL_1, 0);
+      setPWM(BLUE_CHANNEL_2, 0);
 #endif
 
-    digitalWrite(BLUE_RELAY, RELAY_OFF);
-    digitalWrite(WHITE_RELAY, RELAY_OFF);
+      digitalWrite(BLUE_RELAY, RELAY_OFF);
+      digitalWrite(WHITE_RELAY, RELAY_OFF);
 
 #ifdef debuging
       Serial.println("while (curTimeSec >= nightTimeStart || curTimeSec < dawnStart)");
@@ -730,7 +734,7 @@ void LightCycles(void *parameters)
       Serial.println(digitalRead(WHITE_RELAY));
       Serial.println("");
 #endif
-    updateTimes();
+      updateTimes();
     }
   }
 }
@@ -1227,6 +1231,7 @@ void updateTimes()
   while (1)
   {
     delay(MessageGap);
+    /*
     time_t UNIXtime;
     time(&UNIXtime);
     gettimeofday(&tv, NULL); // Get the current time from the ESP32 RTC
@@ -1234,8 +1239,10 @@ void updateTimes()
     localTimeZone.toCharArray(buf_localTimeZone, 8);
     setenv("TZ", buf_localTimeZone, 1);
     tzset();                                                                                                                    // Get the local time
-    localtime_r(&UNIXtime, &timeinfo);                                                                                          // Get the local time
-    strftime(localTime, sizeof(localTime), "%c", &timeinfo);                                                                    // Get the current time from the ESP32 RTC
+    localtime_r(&UNIXtime, &timeinfo);                                                                                           // Get the current time from the ESP32 RTC
+    */
+    getLocalTime(&timeinfo); // Get the current time from the ESP32 RTC
+    strftime(localTime, sizeof(localTime), "%c", &timeinfo);
     curTimeSec = timeinfo.tm_hour * 3600 + timeinfo.tm_min * 60 + timeinfo.tm_sec;                                              //  get the start time in seconds since midnight
     dawnDurationSec = (((sunriseHours * 3600) + (sunriseMinutes * 60)) - ((dawnHours * 3600) + (dawnMinutes * 60)));            //  calculate the duration of the dawn cycle in seconds
     sunriseDurationSec = (((highNoonHours * 3600) + (highNoonMinutes * 60)) - ((sunriseHours * 3600) + (sunriseMinutes * 60))); //  calculate the duration of the sunrise cycle in seconds
