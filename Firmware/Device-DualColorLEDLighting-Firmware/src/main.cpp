@@ -11,7 +11,7 @@
 #define TimeSet 1767305485
 //--------------------------------------------- put #define statements here: ----------------------------------------------------
 
- #define debuging
+// #define debuging
 // #define debugingTime // comment out to remove time debuging
 
 // #define usingAdafruit_MCP4728
@@ -94,17 +94,17 @@ uint64_t nightTimeMinutes = 30;                     // variable to store the nig
 #define NIGHT_TIME_HOURS_MESSAGE_ID 25071           // 0xA0B
 uint64_t nightTimeHours = 22;                       // variable to store the night time hours message data
 #define BLUE_1_MAX_INTENSITY_MESSAGE_ID 25072       // 0xA0C
-uint64_t blue_1_MaxIntensity;                  // variable to store the blue_1 max intensity message data
-float blue_1_MaxIntensity_float = 0.55;                    // variable to store the blue_1 max intensity message data
+uint64_t blue_1_MaxIntensity;                       // variable to store the blue_1 max intensity message data
+float blue_1_MaxIntensity_float;                    // variable to store the blue_1 max intensity message data
 #define BLUE_2_MAX_INTENSITY_MESSAGE_ID 25073       // 0xA0D
-uint64_t blue_2_MaxIntensity;                  // variable to store the blue_2 max intensity message data
-float blue_2_MaxIntensity_float = 0.55;                    // variable to store the blue_2 max intensity message data
+uint64_t blue_2_MaxIntensity;                       // variable to store the blue_2 max intensity message data
+float blue_2_MaxIntensity_float;                    // variable to store the blue_2 max intensity message data
 #define WHITE_1_MAX_INTENSITY_MESSAGE_ID 25074      // 0xA0E
-uint64_t white_1_MaxIntensity;                 // variable to store the white_1 max intensity message data
-float white_1_MaxIntensity_float = 0.55;                   // variable to store the white_1 max intensity message data
+uint64_t white_1_MaxIntensity;                      // variable to store the white_1 max intensity message data
+float white_1_MaxIntensity_float;                   // variable to store the white_1 max intensity message data
 #define WHITE_2_MAX_INTENSITY_MESSAGE_ID 25075      // 0xA0F
-uint64_t white_2_MaxIntensity;                 // variable to store the white_2 max intensity message data
-float white_2_MaxIntensity_float = 0.55;                   // variable to store the white_2 max intensity message data
+uint64_t white_2_MaxIntensity;                      // variable to store the white_2 max intensity message data
+float white_2_MaxIntensity_float;                   // variable to store the white_2 max intensity message data
 #define CURRENT_WHITE_1_MESSAGE_ID 25076            // 0xA10
 uint64_t currentWhite_1_Intensity;                  // variable to store the current white_1 intensity message data
 float currentWhite_1_Intensity_float;               // variable to store the current white_1 intensity message data
@@ -240,9 +240,20 @@ void setup()
   setPWM(WHITE_CHANNEL_2, 0);
   setPWM(BLUE_CHANNEL_1, 0);
   setPWM(BLUE_CHANNEL_2, 0);
-  
-Serial.println("MAX_DAC = " + String(MAX_DAC));
-Serial.println("");
+
+  //  Set initial Max Intensity values to 55% of MAX_DAC
+  white_1_MaxIntensity = (MAX_DAC * 55) / 100.0;
+  white_2_MaxIntensity = (MAX_DAC * 55) / 100.0;
+  blue_1_MaxIntensity = (MAX_DAC * 55) / 100.0;
+  blue_2_MaxIntensity = (MAX_DAC * 55) / 100.0;
+
+  Serial.println("MAX_DAC = " + String(MAX_DAC));
+  Serial.println("Initial Max Intensities:");
+  Serial.println("  White 1: " + String(white_1_MaxIntensity));
+  Serial.println("  White 2: " + String(white_2_MaxIntensity));
+  Serial.println("  Blue 1: " + String(blue_1_MaxIntensity));
+  Serial.println("  Blue 2: " + String(blue_2_MaxIntensity));
+  Serial.println("");
 #endif
 
 #ifdef usingDFRobot_GP8403
@@ -377,29 +388,29 @@ Serial.println("");
       NULL);         /* Task handle to keep track of created task */
                      /* pin task to core 0 */
 
-/*      PWM Test and Calabration Code
-while (1)
-{
-setPWM(WHITE_CHANNEL_1, MAX_DAC * 0.55);
-setPWM(WHITE_CHANNEL_2, MAX_DAC * 0.55);
-setPWM(BLUE_CHANNEL_1, MAX_DAC * 0.55);
-setPWM(BLUE_CHANNEL_2, MAX_DAC * 0.55);
-}
-/*
-while (1)
-{
-for (int dutyCycle = 0; dutyCycle <= MAX_DAC; dutyCycle += 10)
-{
-setPWM(WHITE_CHANNEL_1, dutyCycle);
-delay(100);
-}
-for (int dutyCycle = MAX_DAC; dutyCycle >= 0; dutyCycle -= 10)
-{
-setPWM(WHITE_CHANNEL_1, dutyCycle);
-delay(100);
-}
-}
-*/
+  //      PWM Test and Calabration Code
+  while (1)
+  {
+    setPWM(WHITE_CHANNEL_1, MAX_DAC * 0.55);
+    setPWM(WHITE_CHANNEL_2, MAX_DAC * 0.55);
+    setPWM(BLUE_CHANNEL_1, MAX_DAC * 0.55);
+    setPWM(BLUE_CHANNEL_2, MAX_DAC * 0.55);
+  }
+  /*
+  while (1)
+  {
+  for (int dutyCycle = 0; dutyCycle <= MAX_DAC; dutyCycle += 10)
+  {
+  setPWM(WHITE_CHANNEL_1, dutyCycle);
+  delay(100);
+  }
+  for (int dutyCycle = MAX_DAC; dutyCycle >= 0; dutyCycle -= 10)
+  {
+  setPWM(WHITE_CHANNEL_1, dutyCycle);
+  delay(100);
+  }
+  }
+  */
 }
 
 //  --------------------------------------------------------------  Loop  -------------------------------------------------------------------
@@ -461,11 +472,11 @@ void LightCycles(void *parameters)
     {
       Serial.println("In Dawn Loop curTimeSec = " + String(curTimeSec));
       Serial.println("");
-      
+
       delay(updateLEDs);
       updateTimes();
-      chkmanualOverrideSwitch();    //  check if the manual override switch is on
-      
+      chkmanualOverrideSwitch(); //  check if the manual override switch is on
+
       currentBlue_1_Intensity = map(curTimeSec, dawnStart, dawnStart + dawnDurationSec, 0, blue_1_MaxIntensity); //  map the current time to the start time and the duration of the dawnDurationSec
       currentBlue_2_Intensity = map(curTimeSec, dawnStart, dawnStart + dawnDurationSec, 0, blue_2_MaxIntensity); //  map the current time to the start time and the duration of the dawnDurationSec
 
@@ -515,7 +526,7 @@ void LightCycles(void *parameters)
     {
       Serial.println("In Sunrise Loop curTimeSec = " + String(curTimeSec));
       Serial.println("");
-      
+
       delay(updateLEDs);
       updateTimes();
       chkmanualOverrideSwitch();
@@ -630,7 +641,7 @@ void LightCycles(void *parameters)
     {
       Serial.println("In Sunset Loop curTimeSec = " + String(curTimeSec));
       Serial.println("");
-      
+
       delay(updateLEDs);
       updateTimes();
       chkmanualOverrideSwitch();
@@ -692,7 +703,7 @@ void LightCycles(void *parameters)
     {
       Serial.println("In Dusk Loop curTimeSec = " + String(curTimeSec));
       Serial.println("");
-      
+
       delay(updateLEDs);
       updateTimes();
       chkmanualOverrideSwitch();
@@ -748,7 +759,7 @@ void LightCycles(void *parameters)
     {
       Serial.println("In Night Loop curTimeSec = " + String(curTimeSec));
       Serial.println("");
-      
+
       delay(updateLEDs);
       updateTimes();
       chkmanualOverrideSwitch();
