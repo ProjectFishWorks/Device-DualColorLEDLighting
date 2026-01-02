@@ -6,11 +6,13 @@
 #include <Adafruit_MCP4728.h>
 #include "DFRobot_GP8403.h"
 
-// Initial UNIX time for testing Jan 1, 2026 10:09:00 PM UTC
+// Insert UNIX Time below when flashing firmware
+// What is current UNIX time for testing Jan 1, 2026 10:09:00 PM UTC?
 #define TimeSet 1767305485
 //--------------------------------------------- put #define statements here: ----------------------------------------------------
-#define debuging
-#define debugingTime // comment out to remove time debuging
+
+// #define debuging
+// #define debugingTime // comment out to remove time debuging
 
 // #define usingAdafruit_MCP4728
 // #define usingDFRobot_GP8403
@@ -48,7 +50,7 @@ int DAC_OFF = MAX_DAC;        //  change this to 0 if the DAC is not inverted
 #define BLUE_2_PWM_PIN 3  // PWM pin for BLUE_2
 
 #define PWM_FREQUENCY 1000                // PWM frequency IN HZ
-#define PWM_RESOLUTION 12                 // PWM resolution in bits
+#define PWM_RESOLUTION 10                 // PWM resolution in bits
 int MAX_DAC = pow(2, PWM_RESOLUTION) - 1; // maximum PWM value based on resolution
 int DAC_OFF = 0;                          // value to turn off the PWM output
 
@@ -208,9 +210,11 @@ void setup()
   Serial.println("");
 
   // Initialize the time keeping
-
   tv.tv_sec = TimeSet; // Set the time in seconds since epoch
-
+  localTimeZone = "UTC+" + String(localTimeZoneOffset);
+  localTimeZone.toCharArray(buf_localTimeZone, 8);
+  setenv("TZ", buf_localTimeZone, 1);
+  tzset();
   settimeofday(&tv, NULL);
   // getLocalTime(&timeinfo);
 
@@ -354,13 +358,13 @@ void setup()
   }
 
   xTaskCreate(
-      SendLEDIntensities,   /* Task function. */
-      "SendLEDIntensities", /* name of task. */
-      10000,                /* Stack size of task */
-      NULL,                 /* parameter of the task */
-      1,                    /* priority of the task */
-      NULL);                /* Task handle to keep track of created task */
-                            /* pin task to core 0 */
+      SendLEDIntensities,   // Task function
+      "SendLEDIntensities", // name of task
+      10000,                // Stack size of task
+      NULL,                 // parameter of the task
+      1,                    // priority of the task
+      NULL);                // Task handle to keep track of created task
+                            // pin task to core 0
 
   xTaskCreate(
       LightCycles,   /* Task function. */
@@ -370,6 +374,30 @@ void setup()
       1,             /* priority of the task */
       NULL);         /* Task handle to keep track of created task */
                      /* pin task to core 0 */
+
+/*      PWM Test and Calabration Code
+while (1)
+{
+setPWM(WHITE_CHANNEL_1, MAX_DAC);
+setPWM(WHITE_CHANNEL_2, MAX_DAC);
+setPWM(BLUE_CHANNEL_1, MAX_DAC);
+setPWM(BLUE_CHANNEL_2, MAX_DAC);
+}
+
+while (1)
+{
+for (int dutyCycle = 0; dutyCycle <= MAX_DAC; dutyCycle += 10)
+{
+setPWM(WHITE_CHANNEL_1, dutyCycle);
+delay(100);
+}
+for (int dutyCycle = MAX_DAC; dutyCycle >= 0; dutyCycle -= 10)
+{
+setPWM(WHITE_CHANNEL_1, dutyCycle);
+delay(100);
+}
+}
+*/
 }
 
 //  --------------------------------------------------------------  Loop  -------------------------------------------------------------------
@@ -385,6 +413,11 @@ void LightCycles(void *parameters)
   while (1)
   {
     delay(MessageGap);
+    updateTimes();
+
+    Serial.println("");
+    Serial.println("Starting Light Cycles Function " + String(curTimeSec));
+    Serial.println("");
 
     // Set the LEDs to off in no Light cycles are valid times
 
@@ -416,16 +449,21 @@ void LightCycles(void *parameters)
 #ifdef debuging
     Serial.println("Blue LED off");
     Serial.println("White LED off");
+    Serial.println("curTimeSec 2 = " + String(curTimeSec));
     Serial.println("");
 #endif
-    updateTimes();
 
     //-------------------------------------------------- "Dawn" -------------------------------------------------------------------
 
     while (curTimeSec >= dawnStart && curTimeSec < sunriseStart) // check if the current time is between dawnStart and sunriseStart
     {
+      Serial.println("In Dawn Loop curTimeSec = " + String(curTimeSec));
+      Serial.println("");
+      
       delay(updateLEDs);
-      chkmanualOverrideSwitch();                                                                                 //  check if the manual override switch is on
+      updateTimes();
+      chkmanualOverrideSwitch();    //  check if the manual override switch is on
+      
       currentBlue_1_Intensity = map(curTimeSec, dawnStart, dawnStart + dawnDurationSec, 0, blue_1_MaxIntensity); //  map the current time to the start time and the duration of the dawnDurationSec
       currentBlue_2_Intensity = map(curTimeSec, dawnStart, dawnStart + dawnDurationSec, 0, blue_2_MaxIntensity); //  map the current time to the start time and the duration of the dawnDurationSec
 
@@ -468,14 +506,18 @@ void LightCycles(void *parameters)
       Serial.println("White relay = " + String(digitalRead(WHITE_RELAY)));
       Serial.println("");
 #endif
-      updateTimes();
     }
 
     //----------------------------------- "Sunrise" Fade blue and white to highNoon  --------------------------------------------------
     while (curTimeSec >= sunriseStart && curTimeSec < highNoonStart)
     {
-      chkmanualOverrideSwitch();
+      Serial.println("In Sunrise Loop curTimeSec = " + String(curTimeSec));
+      Serial.println("");
+      
       delay(updateLEDs);
+      updateTimes();
+      chkmanualOverrideSwitch();
+
       //                     map( inputValue, low range input, high range input, low range output, high range output);
       currentBlue_1_Intensity = map(curTimeSec, sunriseStart, sunriseStart + sunriseDurationSec, minBlueValue, blue_1_MaxIntensity);
       currentBlue_2_Intensity = map(curTimeSec, sunriseStart, sunriseStart + sunriseDurationSec, minBlueValue, blue_2_MaxIntensity);
@@ -526,15 +568,19 @@ void LightCycles(void *parameters)
       Serial.println("White relay = " + String(digitalRead(WHITE_RELAY)));
       Serial.println("");
 #endif
-      updateTimes();
     }
 
     //----------------------------------------------------- "HighNoon" ---------------------------------------------------------------
 
     while (curTimeSec >= highNoonStart && curTimeSec < sunsetStart)
     {
-      chkmanualOverrideSwitch();
+      Serial.println("In HighNoon Loop curTimeSec = " + String(curTimeSec));
+      Serial.println("");
+
       delay(updateLEDs);
+      updateTimes();
+      chkmanualOverrideSwitch();
+
       currentBlue_1_Intensity = blue_1_MaxIntensity;
       currentBlue_2_Intensity = blue_2_MaxIntensity;
       currentWhite_1_Intensity = white_1_MaxIntensity;
@@ -574,15 +620,19 @@ void LightCycles(void *parameters)
       Serial.println("White relay = " + String(digitalRead(WHITE_RELAY)));
       Serial.println("");
 #endif
-      updateTimes();
     }
 
     //------------------------------------------------"Sunset" Fade blue and white to  --------------------------------------------------
 
     while (curTimeSec >= sunsetStart && curTimeSec < duskStart)
     {
-      chkmanualOverrideSwitch();
+      Serial.println("In Sunset Loop curTimeSec = " + String(curTimeSec));
+      Serial.println("");
+      
       delay(updateLEDs);
+      updateTimes();
+      chkmanualOverrideSwitch();
+
       currentBlue_1_Intensity = map(curTimeSec, sunsetStart, sunsetStart + sunsetDurationSec, blue_1_MaxIntensity, minBlueValue);
       currentBlue_2_Intensity = map(curTimeSec, sunsetStart, sunsetStart + sunsetDurationSec, blue_2_MaxIntensity, minBlueValue);
       currentWhite_1_Intensity = map(curTimeSec, sunsetStart, sunsetStart + sunsetDurationSec, white_1_MaxIntensity, minWhiteValue);
@@ -632,15 +682,19 @@ void LightCycles(void *parameters)
       Serial.println("White relay = " + String(digitalRead(WHITE_RELAY)));
       Serial.println("");
 #endif
-      updateTimes();
     }
 
     //------------------------------------------------------- Dusk fade blue down -----------------------------------------------------------------------
 
     while (duskStart <= curTimeSec && curTimeSec < nightTimeStart)
     {
-      chkmanualOverrideSwitch();
+      Serial.println("In Dusk Loop curTimeSec = " + String(curTimeSec));
+      Serial.println("");
+      
       delay(updateLEDs);
+      updateTimes();
+      chkmanualOverrideSwitch();
+
       currentBlue_1_Intensity = map(curTimeSec, duskStart, duskStart + duskDurationSec, minBlueValue, blue_1_MaxIntensity);
       currentBlue_2_Intensity = map(curTimeSec, duskStart, duskStart + duskDurationSec, minBlueValue, blue_2_MaxIntensity);
 
@@ -685,14 +739,17 @@ void LightCycles(void *parameters)
       Serial.println(digitalRead(WHITE_RELAY));
       Serial.println("");
 #endif
-      updateTimes();
     }
     //------------------------------------------------------- nightTime -----------------------------------------------------------------------
 
     while (curTimeSec >= nightTimeStart || curTimeSec < dawnStart)
     {
-      chkmanualOverrideSwitch();
+      Serial.println("In Night Loop curTimeSec = " + String(curTimeSec));
+      Serial.println("");
+      
       delay(updateLEDs);
+      updateTimes();
+      chkmanualOverrideSwitch();
 
 #ifdef usingDFRobot_GP8403
       DFRobot_GP8403_1.setDACOutVoltage(WHITE_1_DAC_DFRobot, DAC_OFF); //  set the WHITE_1_DAC to 0V
@@ -734,7 +791,6 @@ void LightCycles(void *parameters)
       Serial.println(digitalRead(WHITE_RELAY));
       Serial.println("");
 #endif
-      updateTimes();
     }
   }
 }
@@ -928,7 +984,6 @@ void receive_message(uint8_t nodeID, uint16_t messageID, uint64_t data)
     {
       delay(MessageGap);
       UNIXtime = data; // Get the UNIX time from the message
-      // struct timeval tv;
       tv.tv_sec = UNIXtime;
       settimeofday(&tv, NULL);
       localTimeZone = "UTC+" + String(localTimeZoneOffset);
@@ -1228,68 +1283,60 @@ void chkmanualOverrideSwitch()
 
 void updateTimes()
 {
-  while (1)
-  {
-    delay(MessageGap);
-    /*
-    time_t UNIXtime;
-    time(&UNIXtime);
-    gettimeofday(&tv, NULL); // Get the current time from the ESP32 RTC
-    localTimeZone = "UTC+" + String(localTimeZoneOffset);
-    localTimeZone.toCharArray(buf_localTimeZone, 8);
-    setenv("TZ", buf_localTimeZone, 1);
-    tzset();                                                                                                                    // Get the local time
-    localtime_r(&UNIXtime, &timeinfo);                                                                                           // Get the current time from the ESP32 RTC
-    */
-    getLocalTime(&timeinfo); // Get the current time from the ESP32 RTC
-    strftime(localTime, sizeof(localTime), "%c", &timeinfo);
-    curTimeSec = timeinfo.tm_hour * 3600 + timeinfo.tm_min * 60 + timeinfo.tm_sec;                                              //  get the start time in seconds since midnight
-    dawnDurationSec = (((sunriseHours * 3600) + (sunriseMinutes * 60)) - ((dawnHours * 3600) + (dawnMinutes * 60)));            //  calculate the duration of the dawn cycle in seconds
-    sunriseDurationSec = (((highNoonHours * 3600) + (highNoonMinutes * 60)) - ((sunriseHours * 3600) + (sunriseMinutes * 60))); //  calculate the duration of the sunrise cycle in seconds
-    highNoonDurationSec = (((sunsetHours * 3600) + (sunsetMinutes * 60)) - ((highNoonHours * 3600) + (highNoonMinutes * 60)));  //  calculate the duration of the highNoon cycle in seconds
-    sunsetDurationSec = (((duskHours * 3600) + (duskMinutes * 60)) - ((sunsetHours * 3600) + (sunsetMinutes * 60)));            //  calculate the duration of the sunset cycle in seconds
-    duskDurationSec = (((nightTimeHours * 3600) + (nightTimeMinutes * 60)) - ((duskHours * 3600) + (duskMinutes * 60)));        //  calculate the duration of the dusk cycle in seconds
-    nightTimeDurationSec = ((MIDNIGHT + dawnStart) - ((nightTimeHours * 3600) + (nightTimeMinutes * 60)));                      //  calculate the duration of the nightTime cycle in seconds
-    dawnStart = (dawnHours * 3600) + (dawnMinutes * 60);                                                                        //  calculate the start time of dawn in seconds since midnight
-    sunriseStart = (sunriseHours * 3600) + (sunriseMinutes * 60);                                                               //  calculate the start time of sunrise in seconds since midnight
-    highNoonStart = (highNoonHours * 3600) + (highNoonMinutes * 60);                                                            //  calculate the start time of high noon in seconds since midnight
-    sunsetStart = (sunsetHours * 3600) + (sunsetMinutes * 60);                                                                  //  calculate the start time of sunset in seconds since midnight
-    duskStart = (duskHours * 3600) + (duskMinutes * 60);                                                                        //  calculate the start time of dusk in seconds since midnight
-    nightTimeStart = (nightTimeHours * 3600) + (nightTimeMinutes * 60);                                                         //  calculate the start time of night time in seconds since midnight
+  delay(MessageGap);
+
+  Serial.println("Running updateTimes function\n");
+
+  getLocalTime(&timeinfo); // Get the current time from the ESP32 RTC
+  strftime(localTime, sizeof(localTime), "%c", &timeinfo);
+  curTimeSec = timeinfo.tm_hour * 3600 + timeinfo.tm_min * 60 + timeinfo.tm_sec;                                              //  get the start time in seconds since midnight
+  dawnDurationSec = (((sunriseHours * 3600) + (sunriseMinutes * 60)) - ((dawnHours * 3600) + (dawnMinutes * 60)));            //  calculate the duration of the dawn cycle in seconds
+  sunriseDurationSec = (((highNoonHours * 3600) + (highNoonMinutes * 60)) - ((sunriseHours * 3600) + (sunriseMinutes * 60))); //  calculate the duration of the sunrise cycle in seconds
+  highNoonDurationSec = (((sunsetHours * 3600) + (sunsetMinutes * 60)) - ((highNoonHours * 3600) + (highNoonMinutes * 60)));  //  calculate the duration of the highNoon cycle in seconds
+  sunsetDurationSec = (((duskHours * 3600) + (duskMinutes * 60)) - ((sunsetHours * 3600) + (sunsetMinutes * 60)));            //  calculate the duration of the sunset cycle in seconds
+  duskDurationSec = (((nightTimeHours * 3600) + (nightTimeMinutes * 60)) - ((duskHours * 3600) + (duskMinutes * 60)));        //  calculate the duration of the dusk cycle in seconds
+  nightTimeDurationSec = ((MIDNIGHT + dawnStart) - ((nightTimeHours * 3600) + (nightTimeMinutes * 60)));                      //  calculate the duration of the nightTime cycle in seconds
+  dawnStart = (dawnHours * 3600) + (dawnMinutes * 60);                                                                        //  calculate the start time of dawn in seconds since midnight
+  sunriseStart = (sunriseHours * 3600) + (sunriseMinutes * 60);                                                               //  calculate the start time of sunrise in seconds since midnight
+  highNoonStart = (highNoonHours * 3600) + (highNoonMinutes * 60);                                                            //  calculate the start time of high noon in seconds since midnight
+  sunsetStart = (sunsetHours * 3600) + (sunsetMinutes * 60);                                                                  //  calculate the start time of sunset in seconds since midnight
+  duskStart = (duskHours * 3600) + (duskMinutes * 60);                                                                        //  calculate the start time of dusk in seconds since midnight
+  nightTimeStart = (nightTimeHours * 3600) + (nightTimeMinutes * 60);
+
+  Serial.println("Times updated in updateTimes function\n");
 
 #ifdef debuging
-    delay(5000);
-    Serial.println("Running updateTimes function");
-    Serial.println("UNIXtime = " + String(UNIXtime));
-    Serial.println("localTimeZone = " + String(localTimeZone));
-    Serial.println("localTime = " + String(localTime));
-    Serial.println("24 hour time = " + String(timeinfo.tm_year) + "," + String(timeinfo.tm_mon) + " " + String(timeinfo.tm_wday) + " " + String(timeinfo.tm_hour) + ":" + String(timeinfo.tm_min) + ":" + String(timeinfo.tm_sec));
-    Serial.println("curTimeSec in seconds  = " + String(curTimeSec));
-    Serial.println("dawnHours = " + String(dawnHours));
-    Serial.println("dawnMinutes = " + String(dawnMinutes));
-    Serial.println("dawnDurationSec = " + String(dawnDurationSec));
-    Serial.println("sunriseHours = " + String(sunriseHours));
-    Serial.println("sunriseMinutes = " + String(sunriseMinutes));
-    Serial.println("sunriseDurationSec = " + String(sunriseDurationSec));
-    Serial.println("highNoonHours = " + String(highNoonHours));
-    Serial.println("highNoonMinutes = " + String(highNoonMinutes));
-    Serial.println("highNoonDurationSec = " + String(highNoonDurationSec));
-    Serial.println("sunsetHours = " + String(sunsetHours));
-    Serial.println("sunsetMinutes = " + String(sunsetMinutes));
-    Serial.println("sunsetDurationSec = " + String(sunsetDurationSec));
-    Serial.println("duskHours = " + String(duskHours));
-    Serial.println("duskMinutes = " + String(duskMinutes));
-    Serial.println("duskDurationSec = " + String(duskDurationSec));
-    Serial.println("nightTimeHours = " + String(nightTimeHours));
-    Serial.println("nightTimeMinutes = " + String(nightTimeMinutes));
-    Serial.println("nightTimeDurationSec = " + String(nightTimeDurationSec));
-    Serial.println("dawnStart = " + String(dawnStart));
-    Serial.println("sunriseStart = " + String(sunriseStart));
-    Serial.println("highNoonStart = " + String(highNoonStart));
-    Serial.println("sunsetStart = " + String(sunsetStart));
-    Serial.println("duskStart = " + String(duskStart));
-    Serial.println("nightTimeStart = " + String(nightTimeStart));
-    Serial.println("");
+  delay(5000);
+  Serial.println("Running updateTimes function");
+  Serial.println("UNIXtime = " + String(UNIXtime));
+  Serial.println("localTimeZone = " + String(localTimeZone));
+  Serial.println("localTime = " + String(localTime));
+  Serial.println("24 hour time = " + String(timeinfo.tm_year) + "," + String(timeinfo.tm_mon) + " " + String(timeinfo.tm_wday) + " " + String(timeinfo.tm_hour) + ":" + String(timeinfo.tm_min) + ":" + String(timeinfo.tm_sec));
+  Serial.println("curTimeSec in seconds  = " + String(curTimeSec));
+  Serial.println("dawnHours = " + String(dawnHours));
+  Serial.println("dawnMinutes = " + String(dawnMinutes));
+  Serial.println("dawnDurationSec = " + String(dawnDurationSec));
+  Serial.println("sunriseHours = " + String(sunriseHours));
+  Serial.println("sunriseMinutes = " + String(sunriseMinutes));
+  Serial.println("sunriseDurationSec = " + String(sunriseDurationSec));
+  Serial.println("highNoonHours = " + String(highNoonHours));
+  Serial.println("highNoonMinutes = " + String(highNoonMinutes));
+  Serial.println("highNoonDurationSec = " + String(highNoonDurationSec));
+  Serial.println("sunsetHours = " + String(sunsetHours));
+  Serial.println("sunsetMinutes = " + String(sunsetMinutes));
+  Serial.println("sunsetDurationSec = " + String(sunsetDurationSec));
+  Serial.println("duskHours = " + String(duskHours));
+  Serial.println("duskMinutes = " + String(duskMinutes));
+  Serial.println("duskDurationSec = " + String(duskDurationSec));
+  Serial.println("nightTimeHours = " + String(nightTimeHours));
+  Serial.println("nightTimeMinutes = " + String(nightTimeMinutes));
+  Serial.println("nightTimeDurationSec = " + String(nightTimeDurationSec));
+  Serial.println("dawnStart = " + String(dawnStart));
+  Serial.println("sunriseStart = " + String(sunriseStart));
+  Serial.println("highNoonStart = " + String(highNoonStart));
+  Serial.println("sunsetStart = " + String(sunsetStart));
+  Serial.println("duskStart = " + String(duskStart));
+  Serial.println("nightTimeStart = " + String(nightTimeStart));
+  Serial.println("");
 #endif
-  }
 }
