@@ -11,7 +11,7 @@
 #define TimeSet 1767305485
 //--------------------------------------------- put #define statements here: ----------------------------------------------------
 
-// #define debuging
+ #define debuging
 // #define debugingTime // comment out to remove time debuging
 
 // #define usingAdafruit_MCP4728
@@ -50,7 +50,7 @@ int DAC_OFF = MAX_DAC;        //  change this to 0 if the DAC is not inverted
 #define BLUE_2_PWM_PIN 3  // PWM pin for BLUE_2
 
 #define PWM_FREQUENCY 1000                // PWM frequency IN HZ
-#define PWM_RESOLUTION 10                 // PWM resolution in bits
+#define PWM_RESOLUTION 12                 // PWM resolution in bits
 int MAX_DAC = pow(2, PWM_RESOLUTION) - 1; // maximum PWM value based on resolution
 int DAC_OFF = 0;                          // value to turn off the PWM output
 
@@ -94,17 +94,17 @@ uint64_t nightTimeMinutes = 30;                     // variable to store the nig
 #define NIGHT_TIME_HOURS_MESSAGE_ID 25071           // 0xA0B
 uint64_t nightTimeHours = 22;                       // variable to store the night time hours message data
 #define BLUE_1_MAX_INTENSITY_MESSAGE_ID 25072       // 0xA0C
-uint64_t blue_1_MaxIntensity = 75;                  // variable to store the blue_1 max intensity message data
-float blue_1_MaxIntensity_float;                    // variable to store the blue_1 max intensity message data
+uint64_t blue_1_MaxIntensity;                  // variable to store the blue_1 max intensity message data
+float blue_1_MaxIntensity_float = 0.55;                    // variable to store the blue_1 max intensity message data
 #define BLUE_2_MAX_INTENSITY_MESSAGE_ID 25073       // 0xA0D
-uint64_t blue_2_MaxIntensity = 75;                  // variable to store the blue_2 max intensity message data
-float blue_2_MaxIntensity_float;                    // variable to store the blue_2 max intensity message data
+uint64_t blue_2_MaxIntensity;                  // variable to store the blue_2 max intensity message data
+float blue_2_MaxIntensity_float = 0.55;                    // variable to store the blue_2 max intensity message data
 #define WHITE_1_MAX_INTENSITY_MESSAGE_ID 25074      // 0xA0E
-uint64_t white_1_MaxIntensity = 75;                 // variable to store the white_1 max intensity message data
-float white_1_MaxIntensity_float;                   // variable to store the white_1 max intensity message data
+uint64_t white_1_MaxIntensity;                 // variable to store the white_1 max intensity message data
+float white_1_MaxIntensity_float = 0.55;                   // variable to store the white_1 max intensity message data
 #define WHITE_2_MAX_INTENSITY_MESSAGE_ID 25075      // 0xA0F
-uint64_t white_2_MaxIntensity = 75;                 // variable to store the white_2 max intensity message data
-float white_2_MaxIntensity_float;                   // variable to store the white_2 max intensity message data
+uint64_t white_2_MaxIntensity;                 // variable to store the white_2 max intensity message data
+float white_2_MaxIntensity_float = 0.55;                   // variable to store the white_2 max intensity message data
 #define CURRENT_WHITE_1_MESSAGE_ID 25076            // 0xA10
 uint64_t currentWhite_1_Intensity;                  // variable to store the current white_1 intensity message data
 float currentWhite_1_Intensity_float;               // variable to store the current white_1 intensity message data
@@ -147,8 +147,8 @@ float minBlueValue_float;                           // variable to store the min
 #endif
 
 // RELAY pins
-#define BLUE_RELAY 3
-#define WHITE_RELAY 2
+#define BLUE_RELAY 18
+#define WHITE_RELAY 19
 
 #define sendMqttMessageUpdateUI 5000 // frequency of sending LED intensity messages to the App
 #define updateLEDs 100               // Delay time in milliseconds
@@ -216,7 +216,6 @@ void setup()
   setenv("TZ", buf_localTimeZone, 1);
   tzset();
   settimeofday(&tv, NULL);
-  // getLocalTime(&timeinfo);
 
   // Initialize the OneWire communication
   Wire.begin(I2C_SDA, I2C_SCL);
@@ -241,6 +240,9 @@ void setup()
   setPWM(WHITE_CHANNEL_2, 0);
   setPWM(BLUE_CHANNEL_1, 0);
   setPWM(BLUE_CHANNEL_2, 0);
+  
+Serial.println("MAX_DAC = " + String(MAX_DAC));
+Serial.println("");
 #endif
 
 #ifdef usingDFRobot_GP8403
@@ -378,12 +380,12 @@ void setup()
 /*      PWM Test and Calabration Code
 while (1)
 {
-setPWM(WHITE_CHANNEL_1, MAX_DAC);
-setPWM(WHITE_CHANNEL_2, MAX_DAC);
-setPWM(BLUE_CHANNEL_1, MAX_DAC);
-setPWM(BLUE_CHANNEL_2, MAX_DAC);
+setPWM(WHITE_CHANNEL_1, MAX_DAC * 0.55);
+setPWM(WHITE_CHANNEL_2, MAX_DAC * 0.55);
+setPWM(BLUE_CHANNEL_1, MAX_DAC * 0.55);
+setPWM(BLUE_CHANNEL_2, MAX_DAC * 0.55);
 }
-
+/*
 while (1)
 {
 for (int dutyCycle = 0; dutyCycle <= MAX_DAC; dutyCycle += 10)
